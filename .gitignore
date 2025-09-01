@@ -1,0 +1,20 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+pip-selfcheck.json
+pip-log.txt
+
+# IDEs & Editors
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Downloaded Data
+# 忽略存放下载的PDF和Markdown文件的文件夹
+ResearchPapers/
