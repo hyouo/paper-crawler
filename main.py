@@ -25,8 +25,8 @@ KEYWORDS = [
 # 3. 分类模式配置
 # 您可以根据自己的兴趣修改下面的分类列表
 ARXIV_CATEGORIES = [
-    'cs.AI',    # 人工智能
-    'cs.LG',    # 机器学习
+    #'cs.AI',    # 人工智能
+    #'cs.LG',    # 机器学习
     'cs.CV',    # 计算机视觉
     'q-bio.GN', # 基因组学
     'q-bio.MN', # 分子网络
@@ -46,7 +46,7 @@ BIORXIV_CATEGORIES = [
 ]
 
 # 4. 通用配置
-BASE_DOWNLOAD_DIR = "ResearchPapers"
+BASE_DOWNLOAD_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'paper')
 # 在分类模式下，获取过去多少天的论文 (1 = 只获取今天)
 CATEGORY_FETCH_DAYS_AGO = 2
 # 在分类模式下，每个来源最多获取的论文总数
@@ -247,11 +247,13 @@ def fetch_from_arxiv_by_category():
                 all_papers_from_all_cats.append(paper_info)
         time.sleep(1) # API礼貌性停顿
 
-    # 去重并按日期排序
+    # 去重并按日期排序，并增加日期过滤
     unique_papers_dict = {paper['id']: paper for paper in all_papers_from_all_cats}
     all_valid_papers = sorted(unique_papers_dict.values(), key=lambda p: p['date'], reverse=True)
-    
-    print(f"\nFound a total of {len(all_valid_papers)} unique papers across all categories.")
+    # 增加日期过滤，只保留最近 CATEGORY_FETCH_DAYS_AGO 天的论文
+    date_limit = datetime.now().date() - timedelta(days=CATEGORY_FETCH_DAYS_AGO - 1)
+    all_valid_papers = [p for p in all_valid_papers if p['date'] >= date_limit]
+    print(f"\nFound a total of {len(all_valid_papers)} unique papers across all categories after date filter.")
 
     papers_to_download = []
     if not ENSURE_DIVERSITY_IN_CATEGORY_FETCH:
@@ -435,5 +437,6 @@ if __name__ == '__main__':
         fetch_from_biorxiv_by_category()
     else:
         print(f"Error: Unknown FETCH_METHOD '{FETCH_METHOD}'. Please use 'keyword' or 'category'.")
-
-    print("\nAll tasks completed. Check the 'ResearchPapers' folder.")
+        # 自动创建 paper 文件夹
+        os.makedirs(BASE_DOWNLOAD_DIR, exist_ok=True)
+        print(f"\nAll tasks completed. Check the 'paper' folder.")
