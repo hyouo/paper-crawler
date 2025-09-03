@@ -17,4 +17,4 @@ pip-log.txt
 
 # Downloaded Data
 # 忽略存放下载的PDF和Markdown文件的文件夹
-Paper/
+paper/

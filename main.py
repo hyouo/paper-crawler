@@ -63,6 +63,9 @@ BIORXIV_DAYS_AGO = 3
 # 在关键词模式下，从arXiv获取的最大论文数量
 ARXIV_MAX_RESULTS_KW = 100
 
+# 5. bioRxiv/medRxiv Markdown 输出配置
+BIORXIV_INCLUDE_ABSTRACT_IN_MD = True # 是否在生成的 .md 文件中包含论文摘要
+
 # --- 脚本核心代码 ---
 
 def sanitize_filename(filename):
@@ -192,11 +195,16 @@ def fetch_from_biorxiv_by_keyword():
             doi = paper.get('doi')
             version = paper.get('version')
             if not doi or not version: continue
-            papers_found.append({
+            
+            paper_data = {
                 "title": title,
                 "page_url": f"https://www.biorxiv.org/content/{doi}v{version}",
                 "pdf_url": f"https://www.biorxiv.org/content/{doi}v{version}.full.pdf"
-            })
+            }
+            if BIORXIV_INCLUDE_ABSTRACT_IN_MD:
+                paper_data["abstract"] = abstract
+            papers_found.append(paper_data)
+
             print(f"Found on bioRxiv: '{title}'")
 
     if not papers_found:
@@ -207,7 +215,10 @@ def fetch_from_biorxiv_by_keyword():
     with open(md_filepath, 'w', encoding='utf-8') as f:
         f.write(f"# bioRxiv Papers Found on {today_str} (Keywords)\n\n")
         for paper in papers_found:
-            f.write(f"---\n\n## {paper['title']}\n\n- **Abstract Page:** [{paper['page_url']}]({paper['page_url']})\n- **Direct PDF Link:** [{paper['pdf_url']}]({paper['pdf_url']})\n\n")
+            f.write(f"---\n\n## {paper['title']}\n\n")
+            if BIORXIV_INCLUDE_ABSTRACT_IN_MD and "abstract" in paper:
+                f.write(f"**Abstract:**\n\n> {paper['abstract']}\n\n")
+            f.write(f"- **Abstract Page:** [{paper['page_url']}]({paper['page_url']})\n- **Direct PDF Link:** [{paper['pdf_url']}]({paper['pdf_url']})\n\n")
     print(f"\nCreated a log file with {len(papers_found)} papers at: {md_filepath}")
 
 
@@ -403,15 +414,20 @@ def fetch_from_biorxiv_by_category():
         date = paper.get('date', 'N/A')
         title = paper.get('title', 'No Title').strip()
         category = paper.get('category', 'N/A').strip()
+        abstract = paper.get('abstract', 'N/A').strip()
 
         print(f"Found recent paper on bioRxiv ({date}): '{title}' in category '{category}'")
-        final_paper_list.append({
+        
+        paper_data = {
             "title": title,
             "category": category.capitalize(),
             "date": date,
             "page_url": f"https://www.biorxiv.org/content/{doi}v{version}",
             "pdf_url": f"https://www.biorxiv.org/content/{doi}v{version}.full.pdf"
-        })
+        }
+        if BIORXIV_INCLUDE_ABSTRACT_IN_MD:
+            paper_data["abstract"] = abstract
+        final_paper_list.append(paper_data)
 
     md_filepath = os.path.join(download_dir, f"biorxiv_links_{today_str}_by_category.md")
     with open(md_filepath, 'w', encoding='utf-8') as f:
@@ -421,6 +437,8 @@ def fetch_from_biorxiv_by_category():
         for paper in final_paper_list:
             f.write(f"---\n\n## [{paper['category']}] {paper['title']}\n\n")
             f.write(f"**Posted on:** {paper['date']}\n\n")
+            if BIORXIV_INCLUDE_ABSTRACT_IN_MD and "abstract" in paper:
+                f.write(f"**Abstract:**\n\n> {paper['abstract']}\n\n")
             f.write(f"- **Abstract Page:** [{paper['page_url']}]({paper['page_url']})\n- **Direct PDF Link:** [{paper['pdf_url']}]({paper['pdf_url']})\n\n")
             
     print(f"\nCreated a log file with {len(final_paper_list)} papers at: {md_filepath}")
