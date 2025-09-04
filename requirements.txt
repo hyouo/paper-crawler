@@ -1,2 +1,7 @@
 requests
 PyYAML
+Flask
+Flask-SocketIO
+eventlet
+beautifulsoup4
+arxiv
