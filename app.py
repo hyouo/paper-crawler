@@ -32,6 +32,8 @@ config = cfg.load_config()
 # 初始化 Flask 应用和 SocketIO
 app = Flask(__name__)
 app.config["SECRET_KEY"] = "your-very-secret-key-change-it!"  # 请在生产环境中更改此密钥
+app.config["TEMPLATES_AUTO_RELOAD"] = True
+app.config["SEND_FILE_MAX_AGE_DEFAULT"] = 0
 socketio = SocketIO(app, async_mode="eventlet")
 
 # 初始化爬虫服务

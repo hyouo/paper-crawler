@@ -268,7 +268,7 @@ def fetch_from_arxiv_by_keyword(config):
 def fetch_from_arxiv_by_category(config, selected_categories_list):
     logger.info("开始从 arXiv 按分类获取论文列表...")
     # Use selected_categories_list directly
-    max_results_per_cat = config["fetch_settings"]["arxiv_max_results_cat"]
+    max_results_per_cat = config["fetch_settings"]["max_papers_per_category_fetch"]
 
     client = arxiv.Client(
         page_size=100,  # Fetch results in batches
