@@ -5,3 +5,5 @@ Flask-SocketIO
 eventlet
 beautifulsoup4
 arxiv
+rich
+questionary

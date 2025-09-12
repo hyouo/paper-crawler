@@ -269,7 +269,7 @@
                     <td><small class="text-muted">${paper.authors.substring(0, 40)}...</small></td>
                     <td><span class="badge bg-${paper.source === 'arXiv' ? 'primary' : 'success'}">${paper.source}</span></td>
                     <td><small class="text-muted">${paper.category.split(',')[0]}</small></td>
-                    <td>${new Date(paper.download_date).toLocaleDateString()}</td>
+                    <td>${paper.download_date ? new Date(paper.download_date).toLocaleDateString() : 'N/A'}</td>
                     <td>
                         ${paper.filepath ?
                             `<a href="/paper_files/${paper.filepath}" target="_blank" class="btn btn-sm btn-outline-secondary" title="下载PDF"><i class="bi bi-file-earmark-pdf"></i> PDF</a>` :
