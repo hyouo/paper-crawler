@@ -7,14 +7,17 @@ import requests
 logger = logging.getLogger(__name__)
 
 
+from rich.logging import RichHandler
+
 def setup_logging():
     """
-    配置日志记录。
+    配置日志记录，使用 rich.logging 来美化输出。
     """
     logging.basicConfig(
         level=logging.INFO,
-        format="%(asctime)s - %(levelname)s - %(message)s",
-        datefmt="%Y-%m-%d %H:%M:%S",
+        format="%(message)s",
+        datefmt="[%X]",
+        handlers=[RichHandler(rich_tracebacks=True, show_path=False)],
     )
 
 

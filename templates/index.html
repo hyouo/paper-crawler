@@ -3,597 +3,874 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>论文抓取与管理平台</title>
-    <!-- Bootstrap 5 CSS -->
+    <title>论文抓取与管理平台 (重构版)</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Bootstrap Icons -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
     <style>
-        body { background-color: #f8f9fa; }
-        .log-panel { height: 200px; background-color: #212529; color: #f8f9fa; font-family: monospace; font-size: 0.8rem; overflow-y: auto; padding: 10px; border-radius: 0 0 .25rem .25rem; }
-        .log-panel .log-entry { white-space: pre-wrap; word-break: break-all; }
-        #papers-table-body a { text-decoration: none; }
-        #papers-table-body a:hover { text-decoration: underline; }
-        .status-badge { min-width: 80px; text-align: center; }
-        .category-checkbox-group { max-height: 200px; overflow-y: auto; border: 1px solid #dee2e6; padding: 10px; border-radius: .25rem; }
-        .category-checkbox-group .form-check { margin-bottom: 5px; }
+        :root {
+            --sidebar-width: 380px;
+            --details-width: 420px;
+        }
+        body {
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+        /* Left Sidebar for Settings */
+        .sidebar {
+            width: var(--sidebar-width);
+            flex-shrink: 0;
+            background-color: #f8f9fa;
+            border-right: 1px solid #dee2e6;
+            display: flex;
+            flex-direction: column;
+            transition: margin-left 0.3s;
+        }
+        .sidebar.collapsed {
+            margin-left: calc(-1 * var(--sidebar-width));
+        }
+        .sidebar-header {
+            padding: 1rem;
+            border-bottom: 1px solid #dee2e6;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .sidebar-content {
+            padding: 1rem;
+            overflow-y: auto;
+            flex-grow: 1;
+        }
+        .sidebar-footer {
+            padding: 1rem;
+            border-top: 1px solid #dee2e6;
+        }
+
+        /* Main Content Panel */
+        .main-content {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+        .main-toolbar {
+            padding: 0.75rem 1rem;
+            border-bottom: 1px solid #dee2e6;
+            background-color: #fff;
+            display: flex;
+            align-items: center;
+        }
+        .paper-list-panel {
+            overflow-y: auto;
+            flex-grow: 1;
+        }
+        .paper-item {
+            display: flex;
+            align-items: center;
+            padding: 0.75rem 1rem;
+            border-bottom: 1px solid #e9ecef;
+            cursor: pointer;
+            transition: background-color 0.15s;
+        }
+        .paper-item:hover, .paper-item.active {
+            background-color: #e9f5ff;
+        }
+        .paper-item .form-check {
+            margin-right: 1rem;
+        }
+        .paper-item-details {
+            flex-grow: 1;
+            overflow: hidden;
+        }
+        .paper-item-title {
+            font-weight: 500;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .paper-item-meta {
+            font-size: 0.85rem;
+            color: #6c757d;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .paper-item-status {
+            flex-shrink: 0;
+            width: 100px;
+            text-align: right;
+        }
+        .progress, .progress-bar {
+            height: 5px;
+        }
+
+        /* Right Details Panel */
+        .details-panel {
+            width: var(--details-width);
+            flex-shrink: 0;
+            border-left: 1px solid #dee2e6;
+            display: flex;
+            flex-direction: column;
+            background-color: #fff;
+            transition: margin-right 0.3s;
+            margin-right: calc(-1 * var(--details-width));
+        }
+        .details-panel.visible {
+            margin-right: 0;
+        }
+        .details-header {
+            padding: 1rem;
+            border-bottom: 1px solid #dee2e6;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .details-content {
+            overflow-y: auto;
+            flex-grow: 1;
+            padding: 1.5rem;
+        }
+        .details-content h5 {
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+        .details-content .authors {
+            font-size: 0.9rem;
+            color: #495057;
+            margin-bottom: 1rem;
+        }
+        .details-content .abstract {
+            font-size: 0.95rem;
+            line-height: 1.6;
+            color: #343a40;
+        }
+        .details-footer {
+            padding: 1rem;
+            border-top: 1px solid #dee2e6;
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .spinner-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255, 255, 255, 0.7);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1050;
+        }
     </style>
 </head>
 <body>
-    <div class="container-fluid mt-4">
-        <header class="text-center mb-4">
-            <h1><i class="bi bi-robot"></i> 论文抓取与管理平台</h1>
-            <p class="lead text-muted">一个现代化的科研论文自动化工具</p>
-        </header>
 
-        <div class="row">
-            <!-- 左侧控制栏 -->
-            <div class="col-lg-4">
-                <!-- 控制面板 -->
-                <div class="card mb-4">
-                    <div class="card-header fw-bold"><i class="bi bi-gear-fill"></i> 控制面板</div>
-                    <div class="card-body">
-                        <div class="mb-3">
-                            <label for="mode-select" class="form-label">抓取模式</label>
-                            <select id="mode-select" class="form-select">
-                                <option value="category">按分类 (推荐)</option>
-                                <option value="keyword">按关键词</option>
-                            </select>
-                        </div>
-                        <div class="d-grid gap-2">
-                            <button id="start-btn" class="btn btn-primary"><i class="bi bi-play-fill"></i> 开始抓取</button>
-                            <button id="stop-btn" class="btn btn-danger" disabled><i class="bi bi-stop-fill"></i> 停止抓取</button>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- 参数配置 -->
-                <div class="card mb-4" id="category-selection-card">
-                    <div class="card-header fw-bold" id="category-selection-heading">
-                        <button class="btn btn-link text-decoration-none text-dark w-100 text-start d-flex justify-content-between align-items-center" type="button" data-bs-toggle="collapse" data-bs-target="#category-selection-collapse" aria-expanded="true" aria-controls="category-selection-collapse">
-                            <i class="bi bi-tags-fill"></i> 类别选择
-                            <i class="bi bi-chevron-down"></i>
-                        </button>
-                    </div>
-                    <div id="category-selection-collapse" class="collapse show" aria-labelledby="category-selection-heading">
-                        <div class="card-body">
-                            <div class="mb-3" id="arxiv-cats-group">
-                                <label class="form-label">arXiv 分类</label>
-                                <div id="arxiv-cats-checkboxes" class="category-checkbox-group">
-                                    <!-- arXiv checkboxes will be loaded here -->
-                                </div>
-                            </div>
-                            <div class="mb-3" id="biorxiv-cats-group">
-                                <label class="form-label">bioRxiv 分类</label>
-                                <div id="biorxiv-cats-checkboxes" class="category-checkbox-group">
-                                    <!-- bioRxiv checkboxes will be loaded here -->
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="card" id="parameter-config-card">
-                    <div class="card-header fw-bold" id="parameters-heading">
-                        <button class="btn btn-link text-decoration-none text-dark w-100 text-start d-flex justify-content-between align-items-center" type="button" data-bs-toggle="collapse" data-bs-target="#parameters-collapse" aria-expanded="true" aria-controls="parameters-collapse">
-                            <i class="bi bi-sliders"></i> 参数配置
-                            <i class="bi bi-chevron-down"></i>
-                        </button>
-                    </div>
-                    <div id="parameters-collapse" class="collapse show" aria-labelledby="parameters-heading">
-                        <div class="card-body">
-                            <div class="mb-3" id="keywords-group">
-                                <label for="keywords-input" class="form-label">关键词 (每行一个)</label>
-                                <textarea id="keywords-input" class="form-control" rows="4"></textarea>
-                            </div>
-                            <div class="mb-3" id="arxiv-max-results-kw-group">
-                                <label for="arxiv-max-results-kw-input" class="form-label">arXiv 关键词最大结果数</label>
-                                <input type="number" class="form-control" id="arxiv-max-results-kw-input" min="1">
-                            </div>
-                            <div class="mb-3" id="biorxiv-days-ago-group">
-                                <label for="biorxiv-days-ago-input" class="form-label">bioRxiv 关键词抓取天数</label>
-                                <input type="number" class="form-control" id="biorxiv-days-ago-input" min="1">
-                            </div>
-                            <div class="mb-3" id="arxiv-max-results-cat-group">
-                                <label for="arxiv-max-results-cat-input" class="form-label">arXiv 分类最大结果数 (每个分类)</label>
-                                <input type="number" class="form-control" id="arxiv-max-results-cat-input" min="1" value="50">
-                            </div>
-                            <div class="mb-3" id="category-fetch-days-ago-group">
-                                <label for="category-fetch-days-ago-input" class="form-label">分类抓取天数</label>
-                                <input type="number" class="form-control" id="category-fetch-days-ago-input" min="1">
-                            </div>
-                            <button id="save-config-btn" class="btn btn-success w-100"><i class="bi bi-check-circle"></i> 保存配置</button>
-                        </div>
-                    </div>
+    <!-- Left Sidebar -->
+    <div class="sidebar" id="settings-panel">
+        <div class="sidebar-header">
+            <h5 class="mb-0"><i class="bi bi-gear-fill"></i> 设置</h5>
+        </div>
+        <div class="sidebar-content">
+            <!-- Search Mode -->
+            <div class="mb-3">
+                <label class="form-label fw-bold">搜索模式</label>
+                <div class="btn-group w-100">
+                    <input type="radio" class="btn-check" name="search-mode" id="mode-category" value="category" autocomplete="off" checked>
+                    <label class="btn btn-outline-primary" for="mode-category">按分类</label>
+                    <input type="radio" class="btn-check" name="search-mode" id="mode-keyword" value="keyword" autocomplete="off">
+                    <label class="btn btn-outline-primary" for="mode-keyword">按关键词</label>
                 </div>
             </div>
 
-            <!-- 右侧状态与结果 -->
-            <div class="col-lg-8">
-                <!-- 状态与日志 -->
-                <div class="card mb-4">
-                    <div class="card-header fw-bold"><i class="bi bi-terminal-fill"></i> 状态与日志</div>
-                    <div class="card-body p-0">
-                        <div class="p-3">
-                            <div class="progress" style="height: 25px;">
-                                <div id="progress-bar" class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">0%</div>
-                            </div>
-                        </div>
-                        <div id="log-panel" class="log-panel">
-                            <div class="log-entry text-muted">等待连接服务器...</div>
-                        </div>
-                    </div>
+            <!-- Category Settings -->
+            <div id="category-settings">
+                <div class="mb-3">
+                    <label class="form-label">arXiv 分类</label>
+                    <div id="arxiv-cats-checkboxes" class="border rounded p-2" style="max-height: 150px; overflow-y: auto;"></div>
                 </div>
+                <div class="mb-3">
+                    <label class="form-label">bioRxiv 分类</label>
+                    <div id="biorxiv-cats-checkboxes" class="border rounded p-2" style="max-height: 150px; overflow-y: auto;"></div>
+                </div>
+            </div>
 
-                <!-- 下载列表 -->
-                <div class="card">
-                    <div class="card-header fw-bold"><i class="bi bi-journals"></i> 下载列表</div>
-                    <div class="card-body">
-                        <div class="mb-3">
-                            <label for="category-filter-select" class="form-label">按类别筛选</label>
-                            <select id="category-filter-select" class="form-select">
-                                <option value="">所有类别</option>
-                                <!-- Categories will be dynamically loaded here -->
-                            </select>
-                        </div>
-                        <div class="d-flex justify-content-end mb-3"> <!-- New div for buttons -->
-                            <button id="delete-selected-btn" class="btn btn-danger btn-sm me-2" disabled><i class="bi bi-trash"></i> 删除选中</button>
-                            <button id="delete-all-btn" class="btn btn-danger btn-sm"><i class="bi bi-trash-fill"></i> 删除所有</button>
-                        </div>
-                        <div class="table-responsive">
-                            <table class="table table-hover table-sm">
-                                <thead>
-                                    <tr>
-                                        <th scope="col"><input type="checkbox" id="select-all-papers"></th>
-                                        <th scope="col">标题</th>
-                                        <th scope="col">作者</th>
-                                        <th scope="col">来源</th>
-                                        <th scope="col">分类</th>
-                                        <th scope="col">日期</th>
-                                        <th scope="col">下载/链接</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="papers-table-body">
-                                    <!-- 论文条目将通过JS动态插入 -->
-                                </tbody>
-                            </table>
+            <!-- Keyword Settings -->
+            <div id="keyword-settings" class="d-none">
+                <div class="mb-3">
+                    <label for="keywords-input" class="form-label">关键词 (每行一个)</label>
+                    <textarea id="keywords-input" class="form-control" rows="3"></textarea>
+                </div>
+            </div>
+
+            <!-- Advanced Settings -->
+            <div class="accordion" id="advanced-settings-accordion">
+                <div class="accordion-item">
+                    <h2 class="accordion-header">
+                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-advanced">
+                            高级设置
+                        </button>
+                    </h2>
+                    <div id="collapse-advanced" class="accordion-collapse collapse">
+                        <div class="accordion-body">
+                            <div class="mb-3">
+                                <label for="authors-input" class="form-label">作者 (每行一个)</label>
+                                <textarea id="authors-input" class="form-control" rows="2"></textarea>
+                            </div>
+
+                            <!-- Date Range -->
+                            <div class="row g-2 mb-3">
+                                <div class="col">
+                                    <label for="start-date-input" class="form-label">开始日期</label>
+                                    <input type="date" id="start-date-input" class="form-control">
+                                </div>
+                                <div class="col">
+                                    <label for="end-date-input" class="form-label">结束日期</label>
+                                    <input type="date" id="end-date-input" class="form-control">
+                                </div>
+                            </div>
+
+                            <!-- Keyword-Mode Specific Settings -->
+                            <div id="advanced-settings-keyword">
+                                <div class="mb-3">
+                                    <label for="keyword-field-select" class="form-label">关键词搜索范围</label>
+                                    <select id="keyword-field-select" class="form-select">
+                                        <option value="all">所有字段</option>
+                                        <option value="title">仅标题</option>
+                                        <option value="abstract">仅摘要</option>
+                                    </select>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="max-results-input" class="form-label">关键词模式最大获取数</label>
+                                    <input type="number" id="max-results-input" class="form-control" value="100">
+                                </div>
+                            </div>
+
+                            <!-- Category-Mode Specific Settings -->
+                            <div id="advanced-settings-category">
+                                <div class="mb-3">
+                                    <label for="max-per-category-input" class="form-label">分类模式每类最大获取数</label>
+                                    <input type="number" id="max-per-category-input" class="form-control" value="10">
+                                </div>
+                            </div>
+
+                            <hr>
+
+                            <div class="mb-3">
+                                <label for="search-ids-input" class="form-label">arXiv ID 精确搜索 (覆盖其他)</label>
+                                <textarea id="search-ids-input" class="form-control" rows="2" placeholder="每行一个ID, e.g., 2305.08721"></textarea>
+                            </div>
+
+                             <!-- Universal arXiv Settings -->
+                            <div class="mb-3">
+                                <label for="arxiv-sort-by-select" class="form-label">arXiv 排序方式</label>
+                                <select id="arxiv-sort-by-select" class="form-select">
+                                    <option value="SubmittedDate">提交日期</option>
+                                    <option value="Relevance">相关性</option>
+                                    <option value="LastUpdatedDate">最后更新</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label for="arxiv-sort-order-select" class="form-label">arXiv 排序顺序</label>
+                                <select id="arxiv-sort-order-select" class="form-select">
+                                    <option value="Descending">降序</option>
+                                    <option value="Ascending">升序</option>
+                                </select>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
+        <div class="sidebar-footer">
+            <button id="start-crawl-btn" class="btn btn-primary w-100"><i class="bi bi-search"></i> 开始抓取</button>
+        </div>
     </div>
 
-    <!-- Bootstrap 5 JS -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-    <!-- Socket.IO Client -->
+    <!-- Main Content -->
+    <div class="main-content">
+        <div class="main-toolbar">
+            <button class="btn btn-sm btn-light me-3" id="toggle-settings-btn" title="切换设置面板"><i class="bi bi-layout-sidebar-inset"></i></button>
+            <div class="form-check me-3">
+                <input class="form-check-input" type="checkbox" value="" id="select-all-checkbox">
+                <label class="form-check-label" for="select-all-checkbox">全选</label>
+            </div>
+            <button id="batch-download-btn" class="btn btn-sm btn-success me-2" disabled><i class="bi bi-download"></i> 批量下载</button>
+            <button id="batch-delete-btn" class="btn btn-sm btn-danger me-3" disabled><i class="bi bi-trash"></i> 批量删除</button>
+            <button id="clear-new-btn" class="btn btn-sm btn-outline-secondary"><i class="bi bi-eraser"></i> 清除新条目</button>
+
+            <div class="ms-auto d-flex align-items-center">
+                <select class="form-select form-select-sm" id="category-filter-select" style="width: auto;">
+                    <option value="">所有类别</option>
+                </select>
+                <span id="status-text" class="ms-3 text-muted"></span>
+            </div>
+        </div>
+        <div class="paper-list-panel" id="paper-list-panel">
+            <!-- Paper items will be injected here by JS -->
+        </div>
+        <div class="spinner-overlay d-none" id="loading-spinner">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Right Details Panel -->
+    <div class="details-panel" id="details-panel">
+        <div class="details-header">
+            <h5 class="mb-0">论文详情</h5>
+            <button class="btn-close" id="close-details-btn"></button>
+        </div>
+        <div class="details-content" id="details-content-area">
+             <!-- Details will be injected here -->
+             <div id="details-placeholder">
+                <div class="text-center text-muted mt-5">
+                    <i class="bi bi-journal-text" style="font-size: 3rem;"></i>
+                    <p class="mt-2">从左侧列表选择一篇论文以查看详情</p>
+                </div>
+            </div>
+        </div>
+        <div class="details-footer d-none" id="details-actions">
+            <button class="btn btn-primary flex-grow-1" id="details-main-action-btn"><i class="bi bi-download"></i> 下载</button>
+            <button class="btn btn-secondary" id="details-open-file-btn" title="打开文件" disabled><i class="bi bi-file-earmark-arrow-up"></i></button>
+            <button class="btn btn-secondary" id="details-open-folder-btn" title="打开所在文件夹" disabled><i class="bi bi-folder2-open"></i></button>
+        </div>
+    </div>
+
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
-    <!-- Custom JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        document.addEventListener('DOMContentLoaded', function () {
-            const socket = io();
+document.addEventListener('DOMContentLoaded', function () {
+    const socket = io();
 
-            // --- Global State ---
-            let allPapers = []; // To store all fetched papers for filtering
+    // --- DOM Elements ---
+    const settingsPanel = document.getElementById('settings-panel');
+    const toggleSettingsBtn = document.getElementById('toggle-settings-btn');
+    const startCrawlBtn = document.getElementById('start-crawl-btn');
+    const loadingSpinner = document.getElementById('loading-spinner');
+    const statusText = document.getElementById('status-text');
 
-            // --- DOM Elements ---
-            const startBtn = document.getElementById('start-btn');
-            const stopBtn = document.getElementById('stop-btn');
-            const saveConfigBtn = document.getElementById('save-config-btn');
-            const modeSelect = document.getElementById('mode-select');
-            const logPanel = document.getElementById('log-panel');
-            const progressBar = document.getElementById('progress-bar');
-            const papersTableBody = document.getElementById('papers-table-body');
-            const keywordsInput = document.getElementById('keywords-input');
-            const arxivCatsCheckboxes = document.getElementById('arxiv-cats-checkboxes');
-            const biorxivCatsCheckboxes = document.getElementById('biorxiv-cats-checkboxes');
-            const categoryFilterSelect = document.getElementById('category-filter-select');
-            const selectAllPapersCheckbox = document.getElementById('select-all-papers');
-            const deleteSelectedBtn = document.getElementById('delete-selected-btn');
-            const deleteAllBtn = document.getElementById('delete-all-btn');
-            
-            // Input groups for toggling visibility
-            const keywordsGroup = document.getElementById('keywords-group');
-            const arxivCatsGroup = document.getElementById('arxiv-cats-group');
-            const biorxivCatsGroup = document.getElementById('biorxiv-cats-group');
-            const arxivMaxResultsKwGroup = document.getElementById('arxiv-max-results-kw-group');
-            const biorxivDaysAgoGroup = document.getElementById('biorxiv-days-ago-group');
-            const arxivMaxResultsCatGroup = document.getElementById('arxiv-max-results-cat-group');
-            const categoryFetchDaysAgoGroup = document.getElementById('category-fetch-days-ago-group');
+    const paperListPanel = document.getElementById('paper-list-panel');
+    const selectAllCheckbox = document.getElementById('select-all-checkbox');
+    const batchDownloadBtn = document.getElementById('batch-download-btn');
+    const batchDeleteBtn = document.getElementById('batch-delete-btn');
+    const clearNewBtn = document.getElementById('clear-new-btn');
 
-            // --- Helper Functions ---
-            const addLog = (message, level = 'info') => {
-                const entry = document.createElement('div');
-                entry.className = `log-entry text-${level}`;
-                entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
-                logPanel.appendChild(entry);
-                logPanel.scrollTop = logPanel.scrollHeight;
-            };
+    const detailsPanel = document.getElementById('details-panel');
+    const detailsContentArea = document.getElementById('details-content-area');
+    const detailsPlaceholder = document.getElementById('details-placeholder');
+    const detailsActions = document.getElementById('details-actions');
+    const closeDetailsBtn = document.getElementById('close-details-btn');
+    const detailsMainActionBtn = document.getElementById('details-main-action-btn');
+    const detailsOpenFileBtn = document.getElementById('details-open-file-btn');
+    const detailsOpenFolderBtn = document.getElementById('details-open-folder-btn');
 
-            const setProgress = (percentage, text = null) => {
-                percentage = Math.max(0, Math.min(100, percentage));
-                progressBar.style.width = `${percentage}%`;
-                progressBar.setAttribute('aria-valuenow', percentage);
-                progressBar.textContent = text || `${percentage}%`;
-            };
+    // Settings
+    const modeCategoryRadio = document.getElementById('mode-category');
+    const modeKeywordRadio = document.getElementById('mode-keyword');
+    const categorySettings = document.getElementById('category-settings');
+    const keywordSettings = document.getElementById('keyword-settings');
+    const arxivCatsCheckboxes = document.getElementById('arxiv-cats-checkboxes');
+    const biorxivCatsCheckboxes = document.getElementById('biorxiv-cats-checkboxes');
+    const keywordsInput = document.getElementById('keywords-input');
+    const authorsInput = document.getElementById('authors-input');
+    const arxivSortBySelect = document.getElementById('arxiv-sort-by-select');
+    const maxResultsInput = document.getElementById('max-results-input');
+    const categoryFilterSelect = document.getElementById('category-filter-select');
+    // New Advanced Settings
+    const advancedSettingsKeyword = document.getElementById('advanced-settings-keyword');
+    const advancedSettingsCategory = document.getElementById('advanced-settings-category');
+    const startDateInput = document.getElementById('start-date-input');
+    const endDateInput = document.getElementById('end-date-input');
+    const keywordFieldSelect = document.getElementById('keyword-field-select');
+    const arxivSortOrderSelect = document.getElementById('arxiv-sort-order-select');
+    const maxPerCategoryInput = document.getElementById('max-per-category-input');
+    const searchIdsInput = document.getElementById('search-ids-input');
 
-            const setCrawlActive = (isActive) => {
-                startBtn.disabled = isActive;
-                stopBtn.disabled = !isActive;
-                if (isActive) {
-                    progressBar.classList.add('progress-bar-animated');
-                    setProgress(0, '0%');
-                } else {
-                    progressBar.classList.remove('progress-bar-animated');
-                }
-            };
+    // --- State ---
+    let currentPapers = new Map(); // Use a map for easy access by pdf_url
+    let selectedPaperUrl = null;
+    let isCrawling = false;
 
-            const updateDeleteButtonState = () => {
-                const checkedCheckboxes = document.querySelectorAll('.paper-checkbox:checked');
-                deleteSelectedBtn.disabled = checkedCheckboxes.length === 0;
-            };
+    // --- Helper Functions ---
+    const showLoading = (show) => {
+        loadingSpinner.classList.toggle('d-none', !show);
+        startCrawlBtn.disabled = show;
+        if(show) statusText.textContent = '抓取中...';
+    };
 
-            const deletePapers = async (paperIds) => {
-                if (!confirm(`确定要删除 ${paperIds.length} 篇论文吗？这将同时删除本地文件。`)) {
-                    return;
-                }
-                try {
-                    const response = await fetch('/api/papers/delete', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ paper_ids: paperIds })
-                    });
-                    const result = await response.json();
-                    if (result.status === 'success') {
-                        addLog(`成功删除 ${result.message}`, 'success');
-                        // Remove deleted papers from allPapers array
-                        allPapers = allPapers.filter(paper => !paperIds.includes(paper.id));
-                        filterPapers(); // Re-render the table
-                        updateDeleteButtonState(); // Update button state
-                        selectAllPapersCheckbox.checked = false; // Uncheck select all
-                    } else {
-                        addLog(`删除失败: ${result.message}`, 'danger');
-                    }
-                } catch (error) {
-                    addLog('删除论文失败，请检查后端日志。', 'danger');
-                    console.error(error);
-                }
-            };
+    const updateStatus = (message) => {
+        statusText.textContent = message;
+    };
 
-            const renderPaperRow = (paper) => {
-                const row = document.createElement('tr');
-                row.setAttribute('data-paper-id', paper.id); // Add data attribute for paper ID
-                row.innerHTML = `
-                    <td><input type="checkbox" class="paper-checkbox" value="${paper.id}"></td> <!-- New checkbox column -->
-                    <td><a href="${paper.paper_url}" target="_blank" title="${paper.title}">${paper.title.substring(0, 60)}...</a></td>
-                    <td><small class="text-muted">${paper.authors.substring(0, 40)}...</small></td>
-                    <td><span class="badge bg-${paper.source === 'arXiv' ? 'primary' : 'success'}">${paper.source}</span></td>
-                    <td><small class="text-muted">${paper.category.split(',')[0]}</small></td>
-                    <td>${new Date(paper.download_date).toLocaleDateString()}</td>
-                    <td>
-                        ${paper.filepath ?
-                            `<a href="/paper_files/${paper.filepath}" target="_blank" class="btn btn-sm btn-outline-secondary" title="下载PDF"><i class="bi bi-file-earmark-pdf"></i> PDF</a>` :
-                            `<a href="${paper.paper_url}" target="_blank" class="btn btn-sm btn-outline-info" title="查看原文"><i class="bi bi-box-arrow-up-right"></i> Link</a>`
-                        }
-                    </td>
-                `;
-                return row;
-            };
+    const showDetailsPanel = (show) => {
+        detailsPanel.classList.toggle('visible', show);
+    };
 
-            const toggleModeInputs = () => {
-                const mode = modeSelect.value;
-                if (mode === 'category') {
-                    keywordsGroup.style.display = 'none';
-                    arxivMaxResultsKwGroup.style.display = 'none';
-                    biorxivDaysAgoGroup.style.display = 'none';
+    const toggleAdvancedSettings = () => {
+        const isKeywordMode = modeKeywordRadio.checked;
+        // Toggle basic settings visibility
+        keywordSettings.style.display = isKeywordMode ? 'block' : 'none';
+        categorySettings.style.display = isKeywordMode ? 'none' : 'block';
+        // Toggle advanced settings visibility
+        advancedSettingsKeyword.style.display = isKeywordMode ? 'block' : 'none';
+        advancedSettingsCategory.style.display = isKeywordMode ? 'none' : 'block';
+    };
 
-                    arxivCatsGroup.style.display = 'block';
-                    biorxivCatsGroup.style.display = 'block';
-                    arxivMaxResultsCatGroup.style.display = 'block';
-                    categoryFetchDaysAgoGroup.style.display = 'block';
-                } else if (mode === 'keyword') {
-                    keywordsGroup.style.display = 'block';
-                    arxivMaxResultsKwGroup.style.display = 'block';
-                    biorxivDaysAgoGroup.style.display = 'block';
-
-                    arxivCatsGroup.style.display = 'none';
-                    biorxivCatsGroup.style.display = 'none';
-                    arxivMaxResultsCatGroup.style.display = 'none';
-                    categoryFetchDaysAgoGroup.style.display = 'none';
-                }
-            };
-
-            const filterPapers = () => {
-                const selectedCategory = categoryFilterSelect.value;
-                papersTableBody.innerHTML = ''; // Clear current table
-
-                const filteredPapers = allPapers.filter(paper => {
-                    if (selectedCategory === '') {
-                        return true; // Show all if no category selected
-                    } else {
-                        // Check if the paper's category (or any of its categories if multiple) matches the selected one
-                        return paper.category.split(',').some(cat => cat.trim() === selectedCategory);
-                    }
-                });
-
-                filteredPapers.forEach(paper => papersTableBody.appendChild(renderPaperRow(paper)));
-            };
-
-            // --- API Calls ---
-            const loadCategories = async () => {
-                try {
-                    const response = await fetch('/api/categories');
-                    const data = await response.json();
-
-                    // Populate arXiv categories with checkboxes
-                    arxivCatsCheckboxes.innerHTML = '';
-                    data.arxiv.forEach(group => {
-                        const optgroupLabel = document.createElement('div');
-                        optgroupLabel.className = 'fw-bold mt-2';
-                        optgroupLabel.textContent = group.group;
-                        arxivCatsCheckboxes.appendChild(optgroupLabel);
-
-                        group.categories.forEach(cat => {
-                            const div = document.createElement('div');
-                            div.className = 'form-check';
-                            div.innerHTML = `
-                                <input class="form-check-input" type="checkbox" value="${cat.code}" id="arxiv-${cat.code}">
-                                <label class="form-check-label" for="arxiv-${cat.code}">
-                                    ${cat.name} (${cat.code})
-                                </label>
-                            `;
-                            arxivCatsCheckboxes.appendChild(div);
-                        });
-                    });
-
-                    // Populate bioRxiv categories with checkboxes
-                    biorxivCatsCheckboxes.innerHTML = '';
-                    data.biorxiv.forEach(cat => {
-                        const div = document.createElement('div');
-                        div.className = 'form-check';
-                        div.innerHTML = `
-                            <input class="form-check-input" type="checkbox" value="${cat}" id="biorxiv-${cat.replace(/\s/g, '')}">
-                            <label class="form-check-label" for="biorxiv-${cat.replace(/\s/g, '')}">
-                                ${cat}
-                            </label>
-                        `;
-                        biorxivCatsCheckboxes.appendChild(div);
-                    });
-
-                    // Populate category filter select
-                    categoryFilterSelect.innerHTML = '<option value="">所有类别</option>';
-                    const uniqueCategories = new Set();
-                    data.arxiv.forEach(group => {
-                        group.categories.forEach(cat => uniqueCategories.add(cat.code));
-                    });
-                    data.biorxiv.forEach(cat => uniqueCategories.add(cat));
-
-                    Array.from(uniqueCategories).sort().forEach(cat => {
-                        const option = document.createElement('option');
-                        option.value = cat;
-                        option.textContent = cat;
-                        categoryFilterSelect.appendChild(option);
-                    });
-
-                    addLog('分类列表加载成功。', 'success');
-                } catch (error) {
-                    addLog('加载分类列表失败。', 'danger');
-                    console.error(error);
-                }
-            };
-
-            const loadConfig = async () => {
-                try {
-                    const response = await fetch('/api/config');
-                    const configData = await response.json();
-                    const state = { config: configData }; 
-
-                    keywordsInput.value = (state.config.keywords || []).join('\n');
-                    
-                    // Set checked state for arXiv checkboxes
-                    const arxivValues = (state.config.categories.arxiv || []).map(val => val.toLowerCase());
-                    arxivCatsCheckboxes.querySelectorAll('input[type="checkbox"]').forEach(checkbox => {
-                        checkbox.checked = arxivValues.includes(checkbox.value.toLowerCase());
-                    });
-
-                    // Set checked state for bioRxiv checkboxes
-                    const biorxivValues = (state.config.categories.biorxiv || []).map(val => val.toLowerCase());
-                    biorxivCatsCheckboxes.querySelectorAll('input[type="checkbox"]').forEach(checkbox => {
-                        checkbox.checked = biorxivValues.includes(checkbox.value.toLowerCase());
-                    });
-                    
-                    // Set fetch settings values
-                    document.getElementById('arxiv-max-results-kw-input').value = state.config.fetch_settings.arxiv_max_results_kw || 100;
-                    document.getElementById('biorxiv-days-ago-input').value = state.config.fetch_settings.biorxiv_days_ago || 7;
-                    document.getElementById('arxiv-max-results-cat-input').value = state.config.fetch_settings.arxiv_max_results_cat || 50;
-                    document.getElementById('category-fetch-days-ago-input').value = state.config.fetch_settings.category_fetch_days_ago || 7;
-
-                    addLog('配置加载成功。', 'success');
-                } catch (error) {
-                    addLog('加载配置失败。', 'danger');
-                    console.error(error);
-                }
-            };
-
-            const loadPapers = async () => {
-                try {
-                    const response = await fetch('/api/papers');
-                    const papers = await response.json();
-                    allPapers = papers; // Store all papers
-                    filterPapers(); // Apply initial filter (show all)
-                    addLog(`已加载 ${papers.length} 条已下载论文记录。`, 'info');
-
-                    // Populate category filter select with categories from loaded papers
-                    const uniqueCategoriesFromPapers = new Set();
-                    allPapers.forEach(paper => {
-                        // Split by comma and add each category
-                        paper.category.split(',').forEach(cat => uniqueCategoriesFromPapers.add(cat.trim()));
-                    });
-
-                    categoryFilterSelect.innerHTML = '<option value="">所有类别</option>';
-                    Array.from(uniqueCategoriesFromPapers).sort().forEach(cat => {
-                        const option = document.createElement('option');
-                        option.value = cat;
-                        option.textContent = cat;
-                        categoryFilterSelect.appendChild(option);
-                    });
-
-                } catch (error) {
-                    addLog('加载论文列表失败。', 'danger');
-                    console.error(error);
-                }
-            };
-
-            // --- Socket.IO Event Handlers ---
-            socket.on('connect', async () => {
-                addLog('成功连接到服务器！', 'success');
-                await loadCategories(); // Wait for categories to load first
-                await loadConfig();
-                await loadPapers();
-                toggleModeInputs(); // Initial toggle based on default mode
-            });
-
-            socket.on('status_update', (data) => {
-                addLog(data.status, 'info');
-            });
-
-            socket.on('progress_update', (data) => {
-                setProgress(data.progress, data.status);
-            });
-
-            socket.on('paper_downloaded', (data) => {
-                addLog(`新论文已下载: ${data.paper.title}`, 'success');
-                // Add new paper to allPapers and re-filter
-                allPapers.unshift(data.paper); // Add to the beginning
-                filterPapers();
-                // Re-populate category filter select with categories from updated allPapers
-                const uniqueCategoriesFromPapers = new Set();
-                allPapers.forEach(paper => {
-                    paper.category.split(',').forEach(cat => uniqueCategoriesFromPapers.add(cat.trim()));
-                });
-
-                categoryFilterSelect.innerHTML = '<option value="">所有类别</option>';
-                Array.from(uniqueCategoriesFromPapers).sort().forEach(cat => {
-                    const option = document.createElement('option');
-                    option.value = cat;
-                    option.textContent = cat;
-                    categoryFilterSelect.appendChild(option);
-                });
-            });
-
-            socket.on('crawl_finished', () => {
-                setCrawlActive(false);
-                setProgress(100, '完成');
-            });
-
-            // --- UI Event Listeners ---
-            startBtn.addEventListener('click', () => {
-                const mode = modeSelect.value;
-                const getCheckedValues = (container) => Array.from(container.querySelectorAll('input[type="checkbox"]:checked')).map(checkbox => checkbox.value);
-
-                const selectedArxivCategories = getCheckedValues(arxivCatsCheckboxes);
-                const selectedBiorxivCategories = getCheckedValues(biorxivCatsCheckboxes);
-                
-                socket.emit('start_crawl', { 
-                    mode: mode,
-                    categories: {
-                        arxiv: selectedArxivCategories,
-                        biorxiv: selectedBiorxivCategories
-                    }
-                });
-                setCrawlActive(true);
-                addLog(`请求开始抓取，模式: ${mode}`, 'warning');
-            });
-
-            stopBtn.addEventListener('click', () => {
-                socket.emit('stop_crawl');
-                addLog('请求停止抓取... ', 'warning');
-            });
-
-            saveConfigBtn.addEventListener('click', async () => {
-                const getCheckedValues = (container) => Array.from(container.querySelectorAll('input[type="checkbox"]:checked')).map(checkbox => checkbox.value);
-                
-                const newConfig = {
-                    keywords: keywordsInput.value.split('\n').filter(k => k.trim()),
-                    categories: {
-                        arxiv: getCheckedValues(arxivCatsCheckboxes),
-                        biorxiv: getCheckedValues(biorxivCatsCheckboxes),
-                    },
-                    fetch_settings: {
-                        arxiv_max_results_kw: parseInt(document.getElementById('arxiv-max-results-kw-input').value) || 100,
-                        biorxiv_days_ago: parseInt(document.getElementById('biorxiv-days-ago-input').value) || 7,
-                        arxiv_max_results_cat: parseInt(document.getElementById('arxiv-max-results-cat-input').value) || 50,
-                        category_fetch_days_ago: parseInt(document.getElementById('category-fetch-days-ago-input').value) || 7,
-                    }
-                };
-                try {
-                    const response = await fetch('/api/config', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(newConfig)
-                    });
-                    const result = await response.json();
-                    if (result.status === 'success') {
-                        addLog('配置保存成功！', 'success');
-                    } else {
-                        addLog(`配置保存失败: ${result.message}`, 'danger');
-                    }
-                } catch (error) {
-                    addLog('配置保存失败，请检查后端日志。', 'danger');
-                    console.error(error);
-                }
-            });
-
-            modeSelect.addEventListener('change', toggleModeInputs);
-            categoryFilterSelect.addEventListener('change', filterPapers);
-
-            // Select All checkbox
-            selectAllPapersCheckbox.addEventListener('change', () => {
-                const isChecked = selectAllPapersCheckbox.checked;
-                document.querySelectorAll('.paper-checkbox').forEach(checkbox => {
-                    checkbox.checked = isChecked;
-                });
-                updateDeleteButtonState();
-            });
-
-            // Individual paper checkbox
-            papersTableBody.addEventListener('change', (event) => {
-                if (event.target.classList.contains('paper-checkbox')) {
-                    updateDeleteButtonState();
-                    // If any checkbox is unchecked, uncheck "select all"
-                    if (!event.target.checked) {
-                        selectAllPapersCheckbox.checked = false;
-                    } else {
-                        // If all are checked, check "select all"
-                        const allCheckboxes = document.querySelectorAll('.paper-checkbox');
-                        const checkedCheckboxes = document.querySelectorAll('.paper-checkbox:checked');
-                        if (allCheckboxes.length === checkedCheckboxes.length) {
-                            selectAllPapersCheckbox.checked = true;
-                        }
-                    }
-                }
-            });
-
-            // Delete Selected button
-            deleteSelectedBtn.addEventListener('click', () => {
-                const selectedPaperIds = Array.from(document.querySelectorAll('.paper-checkbox:checked')).map(checkbox => parseInt(checkbox.value));
-                if (selectedPaperIds.length > 0) {
-                    deletePapers(selectedPaperIds);
-                } else {
-                    addLog('请选择要删除的论文。', 'warning');
-                }
-            });
-
-            // Delete All button
-            deleteAllBtn.addEventListener('click', () => {
-                const allPaperIds = allPapers.map(paper => paper.id);
-                if (allPaperIds.length > 0) {
-                    deletePapers(allPaperIds);
-                } else {
-                    addLog('没有论文可供删除。', 'warning');
-                }
-            });
+    const updateBatchButtons = () => {
+        const selectedCheckboxes = paperListPanel.querySelectorAll('.paper-checkbox:checked');
+        const canDownload = Array.from(selectedCheckboxes).some(cb => {
+            const paper = currentPapers.get(cb.value);
+            return paper && paper.status === 'new';
         });
+        batchDownloadBtn.disabled = !canDownload;
+
+        const canDelete = Array.from(selectedCheckboxes).some(cb => {
+            const paper = currentPapers.get(cb.value);
+            return paper && paper.status === 'downloaded';
+        });
+        batchDeleteBtn.disabled = !canDelete;
+    };
+
+    // --- Render Functions ---
+    const renderPaperItem = (paper) => {
+        const { title, authors, source, category, pdf_url, status = 'new', progress = 0 } = paper;
+
+        let statusIcon = '';
+        switch(status) {
+            case 'new':
+                statusIcon = '<i class="bi bi-file-earmark text-muted" title="新发现"></i>';
+                break;
+            case 'downloading':
+                statusIcon = `<div class="progress" style="height: 5px;"><div class="progress-bar" role="progressbar" style="width: ${progress}%"></div></div>`;
+                break;
+            case 'downloaded':
+                statusIcon = '<i class="bi bi-check-circle-fill text-success" title="已下载"></i>';
+                break;
+            case 'failed':
+                statusIcon = '<i class="bi bi-x-circle-fill text-danger" title="下载失败"></i>';
+                break;
+        }
+
+        const item = document.createElement('div');
+        item.className = 'paper-item';
+        item.dataset.pdfUrl = pdf_url;
+        item.innerHTML = `
+            <div class="form-check">
+                <input class="form-check-input paper-checkbox" type="checkbox" value="${pdf_url}">
+            </div>
+            <div class="paper-item-details">
+                <div class="paper-item-title" title="${title}">${title}</div>
+                <div class="paper-item-meta">${authors}</div>
+            </div>
+            <div class="paper-item-status">
+                ${statusIcon}
+            </div>
+        `;
+
+        item.addEventListener('click', (e) => {
+            if (e.target.type === 'checkbox') return;
+            selectedPaperUrl = pdf_url;
+            filterAndRenderPaperList(); // To update active state
+            renderDetailsPanel();
+            showDetailsPanel(true);
+        });
+
+        item.querySelector('.paper-checkbox').addEventListener('change', updateBatchButtons);
+
+        if (pdf_url === selectedPaperUrl) {
+            item.classList.add('active');
+        }
+
+        return item;
+    };
+
+    const updateCategoryFilter = () => {
+        const uniqueCategories = new Set();
+        currentPapers.forEach(paper => {
+            if (paper.category) {
+                paper.category.split(',').forEach(cat => uniqueCategories.add(cat.trim()));
+            }
+        });
+
+        const selectedValue = categoryFilterSelect.value;
+        categoryFilterSelect.innerHTML = '<option value="">所有类别</option>';
+        Array.from(uniqueCategories).sort().forEach(cat => {
+            const option = document.createElement('option');
+            option.value = cat;
+            option.textContent = cat;
+            categoryFilterSelect.appendChild(option);
+        });
+        categoryFilterSelect.value = selectedValue;
+    };
+
+    const filterAndRenderPaperList = () => {
+        const filterCategory = categoryFilterSelect.value;
+        paperListPanel.innerHTML = '';
+
+        let papersToRender = Array.from(currentPapers.values());
+
+        if (filterCategory) {
+            papersToRender = papersToRender.filter(paper =>
+                paper.category && paper.category.split(',').map(c => c.trim()).includes(filterCategory)
+            );
+        }
+
+        if (papersToRender.length === 0) {
+            paperListPanel.innerHTML = `<div class="text-center text-muted p-5">没有在 "${filterCategory || '所有类别'}" 中的论文。</div>`;
+            return;
+        }
+
+        papersToRender.forEach(paper => {
+            paperListPanel.appendChild(renderPaperItem(paper));
+        });
+        updateBatchButtons();
+    };
+
+    const renderDetailsPanel = () => {
+        if (!selectedPaperUrl || !currentPapers.has(selectedPaperUrl)) {
+            detailsPlaceholder.classList.remove('d-none');
+            detailsActions.classList.add('d-none');
+            detailsContentArea.querySelector('.paper-details-container')?.remove();
+            return;
+        }
+
+        const paper = currentPapers.get(selectedPaperUrl);
+        detailsPlaceholder.classList.add('d-none');
+
+        let detailsHtml = detailsContentArea.querySelector('.paper-details-container');
+        if (!detailsHtml) {
+            detailsHtml = document.createElement('div');
+            detailsHtml.className = 'paper-details-container';
+            detailsContentArea.appendChild(detailsHtml);
+        }
+
+        detailsHtml.innerHTML = `
+            <h5>${paper.title}</h5>
+            <p class="authors text-muted">${paper.authors}</p>
+            <p class="abstract">${paper.abstract || '无摘要信息。'}</p>
+        `;
+
+        detailsActions.classList.remove('d-none');
+
+        // Configure the main action button based on source and status
+        if (paper.status === 'downloaded') {
+            detailsMainActionBtn.disabled = true;
+            detailsMainActionBtn.innerHTML = `<i class="bi bi-check-circle-fill"></i> 已下载`;
+        } else if (paper.source === 'bioRxiv') {
+            detailsMainActionBtn.disabled = false;
+            detailsMainActionBtn.innerHTML = `<i class="bi bi-box-arrow-up-right"></i> 在浏览器中打开`;
+        } else { // arXiv and others
+            detailsMainActionBtn.disabled = false;
+            detailsMainActionBtn.innerHTML = `<i class="bi bi-download"></i> 下载`;
+        }
+
+        detailsOpenFileBtn.disabled = paper.status !== 'downloaded' || !paper.filepath;
+        detailsOpenFolderBtn.disabled = paper.status !== 'downloaded' || !paper.filepath;
+    };
+
+    // --- API & Socket Functions ---
+    const loadInitialData = async () => {
+        try {
+            // Load config and categories in parallel
+            const [configRes, catRes, dbPapersRes] = await Promise.all([
+                fetch('/api/config'),
+                fetch('/api/categories'),
+                fetch('/api/papers') // Also fetch already downloaded papers
+            ]);
+
+            const config = await configRes.json();
+            const categories = await catRes.json();
+            const dbPapers = await dbPapersRes.json();
+
+            // Populate settings from config
+            const settings = config.fetch_settings || {};
+            keywordsInput.value = (config.keywords || []).join('\\n');
+            authorsInput.value = (settings.search_by_authors || []).join('\\n');
+            maxResultsInput.value = settings.arxiv_max_results_kw || 100;
+            maxPerCategoryInput.value = settings.max_papers_per_category_fetch || 10;
+            searchIdsInput.value = (settings.search_by_ids || []).join('\\n');
+            arxivSortBySelect.value = settings.arxiv_sort_by || 'SubmittedDate';
+            arxivSortOrderSelect.value = settings.arxiv_sort_order || 'Descending';
+            keywordFieldSelect.value = settings.keyword_search_field || 'all';
+            startDateInput.value = settings.search_start_date || '';
+            endDateInput.value = settings.search_end_date || '';
+
+            // Set search mode and toggle advanced settings view
+            if (settings.method === 'keyword') {
+                modeKeywordRadio.checked = true;
+            } else {
+                modeCategoryRadio.checked = true;
+            }
+            toggleAdvancedSettings();
+
+            // Populate categories
+            arxivCatsCheckboxes.innerHTML = categories.arxiv.map(group => `
+                <div class="fw-bold mt-2">${group.group}</div>
+                ${group.categories.map(cat => `
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" value="${cat.code}" id="arxiv-${cat.code}">
+                        <label class="form-check-label" for="arxiv-${cat.code}">${cat.name}</label>
+                    </div>
+                `).join('')}
+            `).join('');
+            biorxivCatsCheckboxes.innerHTML = categories.biorxiv.map(cat => `
+                 <div class="form-check">
+                    <input class="form-check-input" type="checkbox" value="${cat}" id="biorxiv-${cat.replace(/\\s/g, '')}">
+                    <label class="form-check-label" for="biorxiv-${cat.replace(/\\s/g, '')}">${cat}</label>
+                </div>
+            `).join('');
+
+            // Add already downloaded papers to the list
+            dbPapers.forEach(p => {
+                p.status = 'downloaded';
+                currentPapers.set(p.pdf_url, p);
+            });
+            updateCategoryFilter();
+            filterAndRenderPaperList();
+            updateStatus('就绪');
+
+        } catch (error) {
+            console.error('Initialization failed:', error);
+            updateStatus('初始化失败');
+        }
+    };
+
+    // --- Socket.IO Handlers ---
+    socket.on('connect', () => {
+        updateStatus('已连接');
+        loadInitialData();
+    });
+
+    socket.on('status_update', (data) => updateStatus(data.status));
+
+    socket.on('crawl_finished', () => {
+        isCrawling = false;
+        showLoading(false);
+    });
+
+    socket.on('paper_list_update', (data) => {
+        showLoading(false);
+        isCrawling = false;
+        data.papers.forEach(p => {
+            if (!currentPapers.has(p.pdf_url)) {
+                p.status = 'new';
+                currentPapers.set(p.pdf_url, p);
+            }
+        });
+        updateCategoryFilter();
+        filterAndRenderPaperList();
+    });
+
+    socket.on('download_progress', (data) => {
+        if (currentPapers.has(data.pdf_url)) {
+            const paper = currentPapers.get(data.pdf_url);
+            paper.progress = data.progress;
+            // Re-render only the specific item for efficiency
+            const itemEl = paperListPanel.querySelector(`[data-pdf-url="${data.pdf_url}"]`);
+            if (itemEl) {
+                const statusEl = itemEl.querySelector('.paper-item-status');
+                if (statusEl) {
+                     statusEl.innerHTML = `<div class="progress" style="height: 5px;"><div class="progress-bar" role="progressbar" style="width: ${data.progress}%"></div></div>`;
+                }
+            }
+        }
+    });
+
+    socket.on('paper_downloaded', (data) => {
+        const paper = data.paper;
+        if (currentPapers.has(paper.pdf_url)) {
+            paper.status = 'downloaded';
+            currentPapers.set(paper.pdf_url, paper);
+            updateCategoryFilter();
+            filterAndRenderPaperList(); // Full re-render to update status icon
+            if (selectedPaperUrl === paper.pdf_url) {
+                renderDetailsPanel(); // Update details panel if it's the selected one
+            }
+        }
+    });
+
+    // --- Event Listeners ---
+    categoryFilterSelect.addEventListener('change', filterAndRenderPaperList);
+
+    toggleSettingsBtn.addEventListener('click', () => {
+        const isCollapsed = settingsPanel.classList.toggle('collapsed');
+        localStorage.setItem('settingsCollapsed', isCollapsed);
+    });
+
+    closeDetailsBtn.addEventListener('click', () => showDetailsPanel(false));
+
+    modeCategoryRadio.addEventListener('change', toggleAdvancedSettings);
+    modeKeywordRadio.addEventListener('change', toggleAdvancedSettings);
+
+    startCrawlBtn.addEventListener('click', () => {
+        if (isCrawling) return;
+        isCrawling = true;
+        showLoading(true);
+
+        const getCheckedValues = (container) => Array.from(container.querySelectorAll('input:checked')).map(cb => cb.value);
+
+        const params = {
+            mode: modeKeywordRadio.checked ? 'keyword' : 'category',
+            keywords: keywordsInput.value.split('\\n').filter(k => k.trim()),
+            authors: authorsInput.value.split('\\n').filter(a => a.trim()),
+            categories: {
+                arxiv: getCheckedValues(arxivCatsCheckboxes),
+                biorxiv: getCheckedValues(biorxivCatsCheckboxes)
+            },
+            // New advanced settings
+            fetch_settings: {
+                arxiv_sort_by: arxivSortBySelect.value,
+                arxiv_sort_order: arxivSortOrderSelect.value,
+                keyword_search_field: keywordFieldSelect.value,
+                search_start_date: startDateInput.value,
+                search_end_date: endDateInput.value,
+                arxiv_max_results_kw: parseInt(maxResultsInput.value) || 100,
+                max_papers_per_category_fetch: parseInt(maxPerCategoryInput.value) || 10,
+                search_by_ids: searchIdsInput.value.split('\\n').filter(id => id.trim())
+            }
+        };
+        socket.emit('start_crawl', params);
+    });
+
+    selectAllCheckbox.addEventListener('change', () => {
+        paperListPanel.querySelectorAll('.paper-checkbox').forEach(checkbox => {
+            checkbox.checked = selectAllCheckbox.checked;
+        });
+        updateBatchButtons();
+    });
+
+    batchDownloadBtn.addEventListener('click', () => {
+        const papersToDownload = [];
+        paperListPanel.querySelectorAll('.paper-checkbox:checked').forEach(cb => {
+            const paper = currentPapers.get(cb.value);
+            if (paper && paper.status === 'new' && paper.source !== 'bioRxiv') {
+                paper.status = 'downloading';
+                papersToDownload.push(paper);
+            }
+        });
+        if (papersToDownload.length > 0) {
+            socket.emit('download_papers', { papers: papersToDownload });
+            filterAndRenderPaperList(); // Re-render to show "downloading" state
+        }
+    });
+
+    detailsMainActionBtn.addEventListener('click', () => {
+        if (selectedPaperUrl && currentPapers.has(selectedPaperUrl)) {
+            const paper = currentPapers.get(selectedPaperUrl);
+            if (paper.status !== 'new') return;
+
+            if (paper.source === 'bioRxiv') {
+                // Open in new tab for user to handle download
+                window.open(paper.pdf_url, '_blank');
+            } else {
+                // Direct download for arXiv etc.
+                paper.status = 'downloading';
+                socket.emit('download_papers', { papers: [paper] });
+                filterAndRenderPaperList();
+                renderDetailsPanel();
+            }
+        }
+    });
+
+    const openFileOrFolder = async (action, filepath) => {
+         try {
+            await fetch(`/api/${action}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ filepath: filepath })
+            });
+        } catch (error) {
+            console.error(`Failed to ${action}:`, error);
+            updateStatus(`打开 ${action === 'open_file' ? '文件' : '文件夹'} 失败`);
+        }
+    };
+
+    detailsOpenFileBtn.addEventListener('click', () => {
+        if (selectedPaperUrl && currentPapers.has(selectedPaperUrl)) {
+            const paper = currentPapers.get(selectedPaperUrl);
+            if (paper.filepath) {
+                openFileOrFolder('open_file', paper.filepath);
+            }
+        }
+    });
+
+    detailsOpenFolderBtn.addEventListener('click', () => {
+        if (selectedPaperUrl && currentPapers.has(selectedPaperUrl)) {
+            const paper = currentPapers.get(selectedPaperUrl);
+            if (paper.filepath) {
+                openFileOrFolder('open_folder', paper.filepath);
+            }
+        }
+    });
+
+    // Restore UI state from localStorage
+    if (localStorage.getItem('settingsCollapsed') === 'true') {
+        settingsPanel.classList.add('collapsed');
+    }
+
+    batchDeleteBtn.addEventListener('click', async () => {
+        const papersToDelete = [];
+        const paperIdsToDelete = [];
+
+        paperListPanel.querySelectorAll('.paper-checkbox:checked').forEach(cb => {
+            const paper = currentPapers.get(cb.value);
+            if (paper && paper.status === 'downloaded' && paper.id) {
+                papersToDelete.push(paper);
+                paperIdsToDelete.push(paper.id);
+            }
+        });
+
+        if (paperIdsToDelete.length === 0) {
+            alert('请选择已下载的论文进行删除。');
+            return;
+        }
+
+        if (confirm(`确定要删除选中的 ${paperIdsToDelete.length} 篇论文吗？此操作将删除数据库记录和本地文件，且不可恢复。`)) {
+            try {
+                const response = await fetch('/api/papers/delete', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ paper_ids: paperIdsToDelete })
+                });
+                const result = await response.json();
+                if (response.ok) {
+                    updateStatus(`${result.message}`);
+                    // Remove deleted papers from the map
+                    papersToDelete.forEach(p => currentPapers.delete(p.pdf_url));
+                    updateCategoryFilter();
+                    filterAndRenderPaperList();
+                } else {
+                    throw new Error(result.message || '删除失败');
+                }
+            } catch (error) {
+                console.error('删除论文失败:', error);
+                updateStatus(`删除失败: ${error.message}`);
+            }
+        }
+    });
+
+    clearNewBtn.addEventListener('click', () => {
+        const newPapersUrls = [];
+        currentPapers.forEach((paper, url) => {
+            if (paper.status === 'new') {
+                newPapersUrls.push(url);
+            }
+        });
+
+        if (newPapersUrls.length > 0) {
+            if (confirm(`确定要清除 ${newPapersUrls.length} 个新发现的条目吗？`)) {
+                newPapersUrls.forEach(url => currentPapers.delete(url));
+                updateCategoryFilter();
+                filterAndRenderPaperList();
+            }
+        } else {
+            alert('没有可清除的新条目。');
+        }
+    });
+});
     </script>
 </body>
 </html>

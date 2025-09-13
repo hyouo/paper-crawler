@@ -6,6 +6,8 @@ eventlet.monkey_patch()
 
 import os
 import logging
+import platform
+import subprocess
 from flask import Flask, render_template, jsonify, request, send_from_directory
 from flask_socketio import SocketIO
 import webbrowser
@@ -32,6 +34,8 @@ config = cfg.load_config()
 # 初始化 Flask 应用和 SocketIO
 app = Flask(__name__)
 app.config["SECRET_KEY"] = "your-very-secret-key-change-it!"  # 请在生产环境中更改此密钥
+app.config["TEMPLATES_AUTO_RELOAD"] = True
+app.config["SEND_FILE_MAX_AGE_DEFAULT"] = 0
 socketio = SocketIO(app, async_mode="eventlet")
 
 # 初始化爬虫服务
@@ -136,6 +140,61 @@ def get_categories():
     return jsonify({"arxiv": arxiv_categories, "biorxiv": biorxiv_categories})
 
 
+def _open_path(path):
+    """跨平台地打开文件或文件夹"""
+    try:
+        if platform.system() == "Windows":
+            os.startfile(path)
+        elif platform.system() == "Darwin":  # macOS
+            subprocess.run(["open", path], check=True)
+        else:  # Linux and other UNIX-like
+            subprocess.run(["xdg-open", path], check=True)
+        return True
+    except Exception as e:
+        logger.error(f"无法打开路径 '{path}': {e}", exc_info=True)
+        return False
+
+
+@app.route("/api/open_file", methods=["POST"])
+def open_file():
+    """接收文件路径并尝试打开它"""
+    filepath = request.json.get("filepath")
+    if not filepath or not isinstance(filepath, str):
+        return jsonify({"status": "error", "message": "未提供有效的文件路径。"}), 400
+
+    # 安全起见，将路径转换为绝对路径
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    abs_path = os.path.join(base_dir, filepath)
+
+    if not os.path.exists(abs_path) or not os.path.isfile(abs_path):
+        return jsonify({"status": "error", "message": "文件不存在。"}), 404
+
+    if _open_path(abs_path):
+        return jsonify({"status": "success", "message": f"尝试打开文件: {filepath}"})
+    else:
+        return jsonify({"status": "error", "message": "打开文件失败。"}), 500
+
+
+@app.route("/api/open_folder", methods=["POST"])
+def open_folder():
+    """接收文件路径并尝试打开其所在的文件夹"""
+    filepath = request.json.get("filepath")
+    if not filepath or not isinstance(filepath, str):
+        return jsonify({"status": "error", "message": "未提供有效的文件路径。"}), 400
+
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    abs_path = os.path.join(base_dir, filepath)
+    folder_path = os.path.dirname(abs_path)
+
+    if not os.path.exists(folder_path):
+        return jsonify({"status": "error", "message": "文件夹不存在。"}), 404
+
+    if _open_path(folder_path):
+        return jsonify({"status": "success", "message": f"尝试打开文件夹: {folder_path}"})
+    else:
+        return jsonify({"status": "error", "message": "打开文件夹失败。"}), 500
+
+
 @app.route("/paper_files/<path:filepath>")
 def serve_paper_file(filepath):
     """提供对下载的PDF文件的访问"""
@@ -170,11 +229,23 @@ def handle_disconnect():
 def handle_start_crawl(data):
     """处理开始抓取事件"""
     mode = data.get("mode", "category")
-    categories = data.get("categories", {})
+    # 更新配置以匹配当前的抓取参数
+    current_config = cfg.load_config()
+    current_config["fetch_settings"]["method"] = mode
+    current_config["keywords"] = data.get("keywords", [])
+    current_config["categories"] = data.get("categories", {})
+
+    # Merge the new advanced fetch settings
+    new_fetch_settings = data.get("fetch_settings", {})
+    current_config["fetch_settings"].update(new_fetch_settings)
+
+    cfg.save_config(current_config)
+    crawler.config = current_config # Ensure crawler has the latest config
+
     logger.info(
-        f"收到来自客户端 {request.sid} 的抓取请求，模式: {mode}, 类别: {categories}"
+        f"收到来自客户端 {request.sid} 的抓取请求，模式: {mode}"
     )
-    crawler.start_crawl(mode, categories)
+    crawler.start_crawl(mode, data.get("categories", {}))
 
 
 @socketio.on("stop_crawl")
@@ -182,6 +253,20 @@ def handle_stop_crawl():
     """处理停止抓取事件"""
     logger.info(f"收到来自客户端 {request.sid} 的停止请求")
     crawler.stop_crawl()
+
+
+@socketio.on("download_papers")
+def handle_download_papers(data):
+    """处理下载一篇或多篇论文的事件"""
+    papers = data.get("papers")
+    if not papers or not isinstance(papers, list):
+        logger.warning(f"收到无效的下载请求: {data}")
+        return
+
+    logger.info(f"收到来自 {request.sid} 的 {len(papers)} 篇论文的下载请求。")
+    for paper_data in papers:
+        # 使用 start_background_task 以非阻塞方式运行下载
+        socketio.start_background_task(crawler.download_single_paper, paper_data)
 
 
 # --- 主程序入口 --- #

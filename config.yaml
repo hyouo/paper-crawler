@@ -1,3 +1,32 @@
+categories:
+  arxiv:
+  - cs.CV
+  - q-bio.GN
+  - q-bio.MN
+  - q-bio.CB
+  - q-bio.BM
+  - q-bio.QM
+  biorxiv:
+  - bioengineering
+  - bioinformatics
+  - genomics
+  - synthetic biology
+  - systems biology
+  - molecular biology
+  - cancer biology
+  chinese_arxiv: []
+  chinese_biorxiv: []
+fetch_settings:
+  method: category
+  arxiv_max_results_kw: 100
+  max_papers_per_category_fetch: 10
+  search_by_authors: []
+  search_by_ids: []
+  arxiv_sort_by: SubmittedDate
+  arxiv_sort_order: Descending
+  keyword_search_field: all
+  search_start_date: ''
+  search_end_date: ''
 keywords:
 - translational medicine
 - systems biology
@@ -6,26 +35,5 @@ keywords:
 - bioinformatics
 - medical artificial intelligence
 - medical ai
-categories:
-  arxiv:
-  - cs.CV
-  - q-bio.BM
-  - q-bio.CB
-  - q-bio.GN
-  - q-bio.MN
-  - q-bio.QM
-  biorxiv:
-  - Bioengineering
-  - Bioinformatics
-  - Cancer Biology
-  - Genomics
-  - Molecular Biology
-  - Synthetic Biology
-  - Systems Biology
-  chinese_arxiv: []
-  chinese_biorxiv: []
-fetch_settings:
-  arxiv_max_results_kw: 10
-  biorxiv_days_ago: 3
-  arxiv_max_results_cat: 1
-  category_fetch_days_ago: 7
+output_settings:
+  biorxiv_include_abstract_in_md: true

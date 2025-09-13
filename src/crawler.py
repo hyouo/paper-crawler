@@ -49,111 +49,68 @@ class Crawler:
 
         try:
             # 1. 确定要调用的爬取函数和对应的类别列表
-            arxiv_cats = []
-            biorxiv_cats = []
+            arxiv_cats = categories.get("arxiv", [])
+            biorxiv_cats = categories.get("biorxiv", [])
 
-            if categories and categories.get("chinese_arxiv"):
-                arxiv_cats = categories["chinese_arxiv"]
-            elif categories and categories.get("arxiv"):
-                arxiv_cats = categories["arxiv"]
-
-            if categories and categories.get("chinese_biorxiv"):
-                biorxiv_cats = categories["chinese_biorxiv"]
-            elif categories and categories.get("biorxiv"):
-                biorxiv_cats = categories["biorxiv"]
-
-            if mode == "keyword":
-                fetcher_functions = [
+            fetcher_map = {
+                "keyword": [
                     (fetchers.fetch_from_arxiv_by_keyword, None),
                     (fetchers.fetch_from_biorxiv_by_keyword, None),
-                ]
-            elif mode == "category":
-                fetcher_functions = [
+                ],
+                "category": [
                     (fetchers.fetch_from_arxiv_by_category, arxiv_cats),
                     (fetchers.fetch_from_biorxiv_by_category, biorxiv_cats),
-                ]
-            else:
+                ],
+            }
+
+            fetcher_functions = fetcher_map.get(mode)
+            if not fetcher_functions:
                 raise ValueError(f"未知的抓取模式: {mode}")
 
-            # 2. 执行爬取并处理结果
-            total_downloaded = 0
+            # 2. 执行爬取并将所有结果收集到一个列表中
+            paper_list = []
+            unique_urls = set()
+
             for fetcher, cats_list in fetcher_functions:
                 if self._stop_requested:
                     break
 
                 source_name = fetcher.__name__.split("_")[2].capitalize()
-                self._emit(
-                    "status_update", {"status": f"正在从 {source_name} 获取论文列表..."}
-                )
+                self._emit("status_update", {"status": f"正在从 {source_name} 获取论文列表..."})
 
-                # fetcher 将会是一个生成器，逐一产生论文信息
-                if cats_list is not None:
-                    paper_generator = fetcher(self.config, cats_list)
-                else:
-                    paper_generator = fetcher(self.config)
+                try:
+                    # fetcher 是一个生成器
+                    paper_generator = fetcher(self.config, cats_list) if cats_list is not None else fetcher(self.config)
 
-                papers_to_process = list(paper_generator)
-                total_papers = len(papers_to_process)
-                self._emit(
-                    "status_update",
-                    {
-                        "status": f"从 {source_name} 找到 {total_papers} 篇论文。开始检查和下载..."
-                    },
-                )
+                    for paper_data in paper_generator:
+                        if self._stop_requested:
+                            break
+                        # 确保论文没有被重复添加
+                        if paper_data["paper_url"] not in unique_urls:
+                            # 检查论文是否已在数据库中
+                            if not database.is_paper_downloaded(paper_data["pdf_url"]):
+                                paper_list.append(paper_data)
+                                unique_urls.add(paper_data["paper_url"])
+                except Exception as e:
+                    logger.error(f"从 {source_name} 获取数据时出错: {e}", exc_info=True)
+                    self._emit("status_update", {"status": f"从 {source_name} 获取数据时出错: {e}"})
 
-                for i, paper_data in enumerate(papers_to_process):
-                    if self._stop_requested:
-                        logger.info("抓取任务已停止。")
-                        break
+                if self._stop_requested:
+                    break
 
-                    self._emit(
-                        "progress_update",
-                        {
-                            "source": source_name,
-                            "progress": (
-                                int(((i + 1) / total_papers) * 100)
-                                if total_papers > 0
-                                else 0
-                            ),
-                            "status": f"[{source_name}] 正在处理: {paper_data['title']:.50}...",
-                        },
-                    )
+            if self._stop_requested:
+                final_status = "抓取任务已手动停止。"
+            else:
+                final_status = f"抓取任务完成。找到 {len(paper_list)} 篇新论文。"
 
-                    # 检查论文是否已下载
-                    if database.is_paper_downloaded(paper_data["pdf_url"]):
-                        logger.info(f"跳过已下载的论文: {paper_data['title']}")
-                        continue
-
-                    # 根据来源决定是否下载PDF
-                    if paper_data["source"] == "bioRxiv":
-                        logger.info(
-                            f"跳过 bioRxiv 论文下载，只记录信息: {paper_data['title']}"
-                        )
-                        filepath = None  # bioRxiv 论文不下载，文件路径设为 None
-                        paper_data["filepath"] = None  # 确保数据库中也记录为 None
-                        # 存入数据库
-                        database.add_paper(paper_data)
-                        self._emit(
-                            "paper_downloaded", {"paper": paper_data}
-                        )  # 发送最新下载的论文信息
-                    else:
-                        filepath = self._download_paper(paper_data)
-                        if filepath:
-                            total_downloaded += 1
-                            paper_data["filepath"] = filepath
-                            # 存入数据库
-                            database.add_paper(paper_data)
-                            self._emit(
-                                "paper_downloaded", {"paper": paper_data}
-                            )  # 发送最新下载的论文信息
-
-            final_status = (
-                f"抓取任务完成。共下载 {total_downloaded} 篇新论文。"
-                if not self._stop_requested
-                else "抓取任务已手动停止。"
-            )
             logger.info(final_status)
             self._emit("status_update", {"status": final_status})
+
+            # 3. 将整个列表发送给前端，或者在CLI模式下返回它
+            if self.socketio:
+                self._emit("paper_list_update", {"papers": paper_list})
+            else:
+                return paper_list # CLI mode
 
         except Exception as e:
             logger.error(f"抓取任务执行失败: {e}", exc_info=True)
@@ -164,6 +121,10 @@ class Crawler:
             self._emit("crawl_finished", {})
 
     def _download_paper(self, paper_data):
+        """
+        下载单个 PDF 文件并报告进度。
+        这是一个私有方法，只负责下载，不与数据库交互。
+        """
         base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
         today_str = datetime.now().strftime("%Y-%m-%d")
         download_dir = os.path.join(base_dir, "paper", paper_data["source"], today_str)
@@ -176,8 +137,9 @@ class Crawler:
             self._emit(
                 "download_progress",
                 {
-                    "filename": filename,
+                    "pdf_url": paper_data["pdf_url"], # 使用唯一的 URL 作为标识符
                     "progress": progress,
+                    "status": f"下载中... {downloaded_mb:.2f}/{total_mb:.2f} MB"
                 },
             )
 
@@ -189,3 +151,36 @@ class Crawler:
         ):
             return filepath
         return None
+
+    def download_single_paper(self, paper_data):
+        """
+        公开方法：下载、更新数据库并通知前端。
+        """
+        try:
+            logger.info(f"开始下载论文: {paper_data['title']}")
+
+            # 检查是否已下载，以防万一
+            if database.is_paper_downloaded(paper_data["pdf_url"]):
+                logger.warning(f"论文 '{paper_data['title']}' 已存在于数据库中，跳过下载。")
+                # 也许需要通知前端这个状态
+                return
+
+            filepath = self._download_paper(paper_data)
+
+            if filepath:
+                logger.info(f"论文 '{paper_data['title']}' 下载成功，路径: {filepath}")
+                paper_data["filepath"] = filepath
+                paper_data["download_date"] = datetime.now().isoformat()
+
+                # 存入数据库
+                database.add_paper(paper_data)
+
+                # 通过 paper_downloaded 事件通知前端
+                self._emit("paper_downloaded", {"paper": paper_data})
+            else:
+                logger.error(f"下载论文失败: {paper_data['title']}")
+                self._emit("status_update", {"status": f"下载失败: {paper_data['title']}"})
+
+        except Exception as e:
+            logger.error(f"处理论文下载时出错 '{paper_data['title']}': {e}", exc_info=True)
+            self._emit("status_update", {"status": f"处理下载时出错: {e}"})

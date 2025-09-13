@@ -229,112 +229,155 @@ def _arxiv_result_to_paper_data(result):
         "paper_url": result.entry_id,
         "pdf_url": pdf_url,
         "published_date": result.published.date().isoformat(),
+        "abstract": result.summary.strip().replace("\n", " "),
     }
+
+
+def _build_arxiv_query(fetch_settings, keywords, categories=[]):
+    """Helper to build the arXiv query string."""
+    query_parts = []
+
+    # Keywords
+    if keywords:
+        field = fetch_settings.get("keyword_search_field", "all")
+        field_prefix = {"all": "all", "title": "ti", "abstract": "abs"}.get(field, "all")
+        keyword_query = " OR ".join([f'{field_prefix}:"{kw}"' for kw in keywords])
+        query_parts.append(f"({keyword_query})")
+
+    # Authors
+    authors = fetch_settings.get("search_by_authors", [])
+    if authors:
+        author_query = " OR ".join([f'au:"{author}"' for author in authors])
+        query_parts.append(f"({author_query})")
+
+    # Categories
+    if categories:
+        category_query = " OR ".join([f'cat:{cat}' for cat in categories])
+        query_parts.append(f"({category_query})")
+
+    # Date Range
+    start_date = fetch_settings.get("search_start_date")
+    end_date = fetch_settings.get("search_end_date")
+    if start_date and end_date:
+        # Format: YYYYMMDDHHMMSS
+        start_str = start_date.replace('-', '') + "000000"
+        end_str = end_date.replace('-', '') + "235959"
+        query_parts.append(f"submittedDate:[{start_str} TO {end_str}]")
+
+    return " AND ".join(query_parts)
 
 
 def fetch_from_arxiv_by_keyword(config):
     logger.info("开始从 arXiv 按关键词获取论文列表...")
-    keywords = config["keywords"]
-    max_results = config["fetch_settings"]["arxiv_max_results_kw"]
-    search_query = " OR ".join([f'all:"{kw}"' for kw in keywords])
-    logger.debug(f"arXiv 关键词查询: {search_query}, 最大结果数: {max_results}")
+    fetch_settings = config["fetch_settings"]
+    keywords = config.get("keywords", [])
+    id_list = fetch_settings.get("search_by_ids", [])
 
-    client = arxiv.Client(
-        page_size=100,  # Fetch results in batches
-        delay_seconds=3,  # Be polite to the API
-        num_retries=5,  # Internal retries for the arxiv client
-    )
+    search_query = _build_arxiv_query(fetch_settings, keywords)
+
+    if id_list:
+        logger.info(f"正在通过 ID 列表精确查找: {id_list}")
+        search_query = "" # id_list overrides query
+    elif not search_query:
+        logger.warning("未提供关键词、作者或日期范围，arXiv 查询为空，将不会返回任何结果。")
+        return
+
+    sort_by_str = fetch_settings.get("arxiv_sort_by", "SubmittedDate")
+    sort_order_str = fetch_settings.get("arxiv_sort_order", "Descending")
+
+    sort_criterion_map = {
+        "Relevance": arxiv.SortCriterion.Relevance,
+        "LastUpdatedDate": arxiv.SortCriterion.LastUpdatedDate,
+        "SubmittedDate": arxiv.SortCriterion.SubmittedDate,
+    }
+    sort_by = sort_criterion_map.get(sort_by_str, arxiv.SortCriterion.SubmittedDate)
+    sort_order = arxiv.SortOrder.Ascending if sort_order_str == "Ascending" else arxiv.SortOrder.Descending
+
+    client = arxiv.Client(page_size=100, delay_seconds=3, num_retries=5)
     search = arxiv.Search(
         query=search_query,
-        max_results=max_results,
-        sort_by=arxiv.SortCriterion.SubmittedDate,
-        sort_order=arxiv.SortOrder.Descending,
+        id_list=id_list,
+        max_results=fetch_settings.get("arxiv_max_results_kw", 100),
+        sort_by=sort_by,
+        sort_order=sort_order,
     )
 
-    fetched_count = 0
-    results = client.results(search)
-    # Log the number of results found by the arxiv client
-    initial_results = list(results)  # Consume the generator to get count
-    logger.info(f"arXiv 关键词查询找到 {len(initial_results)} 篇论文。")
-
-    for result in initial_results:
-        paper_data = _arxiv_result_to_paper_data(result)
-        if paper_data:
-            fetched_count += 1
-            yield paper_data
-    logger.info(f"从 arXiv 关键词查询获取到 {fetched_count} 篇论文。")
+    try:
+        results = list(client.results(search))
+        logger.info(f"arXiv 关键词查询找到 {len(results)} 篇论文。")
+        for result in results:
+            yield _arxiv_result_to_paper_data(result)
+    except Exception as e:
+        logger.error(f"执行 arXiv 查询时出错: {e}", exc_info=True)
 
 
 def fetch_from_arxiv_by_category(config, selected_categories_list):
     logger.info("开始从 arXiv 按分类获取论文列表...")
-    # Use selected_categories_list directly
-    max_results_per_cat = config["fetch_settings"]["arxiv_max_results_cat"]
+    fetch_settings = config["fetch_settings"]
 
-    client = arxiv.Client(
-        page_size=100,  # Fetch results in batches
-        delay_seconds=3,  # Be polite to the API
-        num_retries=5,  # Internal retries for the arxiv client
-    )
-    unique_paper_urls = set()
-
-    # Get all hardcoded arXiv categories for expansion
     all_arxiv_categories = get_arxiv_categories()
     expanded_categories = []
-
     for selected_cat_code in selected_categories_list:
-        is_group = False
-        for group_data in all_arxiv_categories:
-            if selected_cat_code == group_data["group"]:
-                # This is a group, expand it
-                is_group = True
-                for sub_cat in group_data["categories"]:
-                    expanded_categories.append(sub_cat["code"])
-                break
-        if not is_group:
-            # It's an individual category code
+        is_group = any(selected_cat_code == group_data["group"] for group_data in all_arxiv_categories)
+        if is_group:
+            for group_data in all_arxiv_categories:
+                if selected_cat_code == group_data["group"]:
+                    expanded_categories.extend(sub_cat["code"] for sub_cat in group_data["categories"])
+                    break
+        else:
             expanded_categories.append(selected_cat_code)
 
-    # Remove duplicates from expanded categories
-    expanded_categories = list(set(expanded_categories))
+    search_query = _build_arxiv_query(fetch_settings, [], categories=list(set(expanded_categories)))
 
-    for category_code in expanded_categories:
-        logger.info(f"  - 查询 arXiv 分类: {category_code}")
-        search = arxiv.Search(
-            query=f"cat:{category_code}",
-            max_results=max_results_per_cat,
-            sort_by=arxiv.SortCriterion.SubmittedDate,
-            sort_order=arxiv.SortOrder.Descending,
-        )
-        category_fetched_count = 0
-        results = client.results(search)
-        initial_results = list(results)
-        logger.info(
-            f"    - 从分类 {category_code} 找到 {len(initial_results)} 篇论文。"
-        )
+    if not search_query:
+        logger.warning("未提供分类、作者或日期范围，arXiv 查询为空，将不会返回任何结果。")
+        return
 
-        for result in initial_results:
+    sort_by_str = fetch_settings.get("arxiv_sort_by", "SubmittedDate")
+    sort_order_str = fetch_settings.get("arxiv_sort_order", "Descending")
+
+    sort_criterion_map = {
+        "Relevance": arxiv.SortCriterion.Relevance,
+        "LastUpdatedDate": arxiv.SortCriterion.LastUpdatedDate,
+        "SubmittedDate": arxiv.SortCriterion.SubmittedDate,
+    }
+    sort_by = sort_criterion_map.get(sort_by_str, arxiv.SortCriterion.SubmittedDate)
+    sort_order = arxiv.SortOrder.Ascending if sort_order_str == "Ascending" else arxiv.SortOrder.Descending
+
+    client = arxiv.Client(page_size=100, delay_seconds=3, num_retries=5)
+    search = arxiv.Search(
+        query=search_query,
+        max_results=fetch_settings.get("max_papers_per_category_fetch", 10) * len(expanded_categories),
+        sort_by=sort_by,
+        sort_order=sort_order,
+    )
+
+    try:
+        results = list(client.results(search))
+        logger.info(f"arXiv 分类查询找到 {len(results)} 篇论文。")
+        unique_paper_urls = set()
+        for result in results:
             paper_data = _arxiv_result_to_paper_data(result)
             if paper_data and paper_data["paper_url"] not in unique_paper_urls:
                 unique_paper_urls.add(paper_data["paper_url"])
-                category_fetched_count += 1
                 yield paper_data
-        logger.info(
-            f"    - 从分类 {category_code} 获取到 {category_fetched_count} 篇论文。"
-        )
-    logger.info(f"从 arXiv 分类查询获取到总计 {len(unique_paper_urls)} 篇论文。")
+    except Exception as e:
+        logger.error(f"执行 arXiv 分类查询时出错: {e}", exc_info=True)
 
 
 # --- bioRxiv Fetchers ---
 
+def _get_biorxiv_date_range(fetch_settings):
+    start_date_str = fetch_settings.get("search_start_date")
+    end_date_str = fetch_settings.get("search_end_date")
 
-def _get_biorxiv_date_range(config, mode):
-    if mode == "keyword":
-        days = config["fetch_settings"]["biorxiv_days_ago"]
-    else:  # category
-        days = config["fetch_settings"]["category_fetch_days_ago"]
-    end_date = datetime.now()
-    start_date = end_date - timedelta(days=days)
-    return f"{start_date.strftime('%Y-%m-%d')}/{end_date.strftime('%Y-%m-%d')}"
+    if start_date_str and end_date_str:
+        return f"{start_date_str}/{end_date_str}"
+    else:
+        # Fallback to a default of last 7 days if no range is provided
+        end_date = datetime.now()
+        start_date = end_date - timedelta(days=7)
+        return f"{start_date.strftime('%Y-%m-%d')}/{end_date.strftime('%Y-%m-%d')}"
 
 
 def _query_biorxiv_api(date_range):
@@ -362,16 +405,51 @@ def _parse_biorxiv_entry(paper):
     }
 
 
+def _biorxiv_matches_filters(paper, keywords, authors, search_field='all'):
+    """
+    Helper to check if a bioRxiv paper matches keyword and author filters.
+    """
+    title = paper.get("title", "").lower()
+    abstract = paper.get("abstract", "").lower()
+    paper_authors = paper.get("authors", "").lower()
+
+    # Keyword check
+    keyword_match = not keywords
+    if keywords:
+        if search_field == 'title':
+            keyword_match = any(kw in title for kw in keywords)
+        elif search_field == 'abstract':
+            keyword_match = any(kw in abstract for kw in keywords)
+        else: # 'all'
+            keyword_match = any(kw in title or kw in abstract for kw in keywords)
+
+    if not keyword_match:
+        return False
+
+    # Author check
+    author_match = not authors or any(author.lower() in paper_authors for author in authors)
+    if not author_match:
+        return False
+
+    return True
+
+
 def fetch_from_biorxiv_by_keyword(config):
     logger.info("开始从 bioRxiv 按关键词获取论文列表...")
-    date_range = _get_biorxiv_date_range(config, "keyword")
+    fetch_settings = config["fetch_settings"]
+    date_range = _get_biorxiv_date_range(fetch_settings)
     all_papers = _query_biorxiv_api(date_range)
-    keywords = [kw.lower() for kw in config["keywords"]]
+
+    keywords = [kw.lower() for kw in config.get("keywords", [])]
+    authors = fetch_settings.get("search_by_authors", [])
+    search_field = fetch_settings.get("keyword_search_field", "all")
+
+    if not keywords and not authors:
+        logger.warning("未提供关键词或作者，bioRxiv (关键词模式) 查询将不会返回任何结果。")
+        return
 
     for paper in all_papers:
-        title = paper.get("title", "").lower()
-        abstract = paper.get("abstract", "").lower()
-        if any(kw in title or kw in abstract for kw in keywords):
+        if _biorxiv_matches_filters(paper, keywords, authors, search_field):
             paper_data = _parse_biorxiv_entry(paper)
             if paper_data:
                 yield paper_data
@@ -379,14 +457,26 @@ def fetch_from_biorxiv_by_keyword(config):
 
 def fetch_from_biorxiv_by_category(config, selected_categories_list):
     logger.info("开始从 bioRxiv 按分类获取论文列表...")
-    date_range = _get_biorxiv_date_range(config, "category")
+    fetch_settings = config["fetch_settings"]
+    date_range = _get_biorxiv_date_range(fetch_settings)
     all_papers = _query_biorxiv_api(date_range)
-    # Use selected_categories_list directly
+
     categories = [cat.lower() for cat in selected_categories_list]
+    authors = fetch_settings.get("search_by_authors", [])
 
     for paper in all_papers:
-        category = paper.get("category", "").lower()
-        if category in categories:
-            paper_data = _parse_biorxiv_entry(paper)
-            if paper_data:
-                yield paper_data
+        # Category check
+        category_match = paper.get("category", "").lower() in categories
+        if not category_match:
+            continue
+
+        # Author check (only if authors are specified)
+        if authors:
+            paper_authors = paper.get("authors", "").lower()
+            author_match = any(author.lower() in paper_authors for author in authors)
+            if not author_match:
+                continue
+
+        paper_data = _parse_biorxiv_entry(paper)
+        if paper_data:
+            yield paper_data

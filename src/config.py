@@ -29,10 +29,16 @@ def load_config(config_path: str = None) -> dict:
             logger.warning(f"配置文件 {config_path} 未找到，将创建一个默认配置。")
             default_config = {
                 "fetch_settings": {
+                    "method": "category",
                     "arxiv_max_results_kw": 100,
-                    "biorxiv_days_ago": 7,
-                    "arxiv_max_results_cat": 50,  # Added this line
-                    "category_fetch_days_ago": 7,  # Changed from 3 to 7
+                    "max_papers_per_category_fetch": 10,
+                    "search_by_authors": [],
+                    "search_by_ids": [],
+                    "arxiv_sort_by": "SubmittedDate",
+                    "arxiv_sort_order": "Descending",
+                    "keyword_search_field": "all",
+                    "search_start_date": "",
+                    "search_end_date": "",
                 },
                 "keywords": ["machine learning", "bioinformatics"],
                 "categories": {
