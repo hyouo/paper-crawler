@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="{{ lang }}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>论文抓取与管理平台 (重构版)</title>
+    <title data-i18n="app_title">Paper Fetching and Management Platform (Refactored)</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
     <style>
@@ -170,36 +170,36 @@
     <!-- Left Sidebar -->
     <div class="sidebar" id="settings-panel">
         <div class="sidebar-header">
-            <h5 class="mb-0"><i class="bi bi-gear-fill"></i> 设置</h5>
+            <h5 class="mb-0"><i class="bi bi-gear-fill"></i> <span data-i18n="settings"></span></h5>
         </div>
         <div class="sidebar-content">
             <!-- Search Mode -->
             <div class="mb-3">
-                <label class="form-label fw-bold">搜索模式</label>
+                <label class="form-label fw-bold" data-i18n="search_mode"></label>
                 <div class="btn-group w-100">
                     <input type="radio" class="btn-check" name="search-mode" id="mode-category" value="category" autocomplete="off" checked>
-                    <label class="btn btn-outline-primary" for="mode-category">按分类</label>
+                    <label class="btn btn-outline-primary" for="mode-category" data-i18n="by_category"></label>
                     <input type="radio" class="btn-check" name="search-mode" id="mode-keyword" value="keyword" autocomplete="off">
-                    <label class="btn btn-outline-primary" for="mode-keyword">按关键词</label>
+                    <label class="btn btn-outline-primary" for="mode-keyword" data-i18n="by_keyword"></label>
                 </div>
             </div>
 
             <!-- Category Settings -->
             <div id="category-settings">
                 <div class="mb-3">
-                    <label class="form-label">arXiv 分类</label>
+                    <label class="form-label" data-i18n="arxiv_categories"></label>
                     <div id="arxiv-cats-checkboxes" class="border rounded p-2" style="max-height: 150px; overflow-y: auto;"></div>
                 </div>
                 <div class="mb-3">
-                    <label class="form-label">bioRxiv 分类</label>
+                    <label class="form-label" data-i18n="biorxiv_categories"></label>
                     <div id="biorxiv-cats-checkboxes" class="border rounded p-2" style="max-height: 150px; overflow-y: auto;"></div>
                 </div>
             </div>
 
             <!-- Keyword Settings -->
-            <div id="keyword-settings" class="d-none">
+            <div id="keyword-settings">
                 <div class="mb-3">
-                    <label for="keywords-input" class="form-label">关键词 (每行一个)</label>
+                    <label for="keywords-input" class="form-label" data-i18n="keywords_label"></label>
                     <textarea id="keywords-input" class="form-control" rows="3"></textarea>
                 </div>
             </div>
@@ -208,25 +208,24 @@
             <div class="accordion" id="advanced-settings-accordion">
                 <div class="accordion-item">
                     <h2 class="accordion-header">
-                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-advanced">
-                            高级设置
+                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-advanced" data-i18n="advanced_settings">
                         </button>
                     </h2>
                     <div id="collapse-advanced" class="accordion-collapse collapse">
                         <div class="accordion-body">
                             <div class="mb-3">
-                                <label for="authors-input" class="form-label">作者 (每行一个)</label>
+                                <label for="authors-input" class="form-label" data-i18n="authors_label"></label>
                                 <textarea id="authors-input" class="form-control" rows="2"></textarea>
                             </div>
 
                             <!-- Date Range -->
                             <div class="row g-2 mb-3">
                                 <div class="col">
-                                    <label for="start-date-input" class="form-label">开始日期</label>
+                                    <label for="start-date-input" class="form-label" data-i18n="start_date"></label>
                                     <input type="date" id="start-date-input" class="form-control">
                                 </div>
                                 <div class="col">
-                                    <label for="end-date-input" class="form-label">结束日期</label>
+                                    <label for="end-date-input" class="form-label" data-i18n="end_date"></label>
                                     <input type="date" id="end-date-input" class="form-control">
                                 </div>
                             </div>
@@ -234,15 +233,15 @@
                             <!-- Keyword-Mode Specific Settings -->
                             <div id="advanced-settings-keyword">
                                 <div class="mb-3">
-                                    <label for="keyword-field-select" class="form-label">关键词搜索范围</label>
+                                    <label for="keyword-field-select" class="form-label" data-i18n="keyword_search_field"></label>
                                     <select id="keyword-field-select" class="form-select">
-                                        <option value="all">所有字段</option>
-                                        <option value="title">仅标题</option>
-                                        <option value="abstract">仅摘要</option>
+                                        <option value="all" data-i18n="all_fields"></option>
+                                        <option value="title" data-i18n="title_only"></option>
+                                        <option value="abstract" data-i18n="abstract_only"></option>
                                     </select>
                                 </div>
                                 <div class="mb-3">
-                                    <label for="max-results-input" class="form-label">关键词模式最大获取数</label>
+                                    <label for="max-results-input" class="form-label" data-i18n="max_results_keyword"></label>
                                     <input type="number" id="max-results-input" class="form-control" value="100">
                                 </div>
                             </div>
@@ -250,7 +249,7 @@
                             <!-- Category-Mode Specific Settings -->
                             <div id="advanced-settings-category">
                                 <div class="mb-3">
-                                    <label for="max-per-category-input" class="form-label">分类模式每类最大获取数</label>
+                                    <label for="max-per-category-input" class="form-label" data-i18n="max_results_category"></label>
                                     <input type="number" id="max-per-category-input" class="form-control" value="10">
                                 </div>
                             </div>
@@ -258,24 +257,24 @@
                             <hr>
 
                             <div class="mb-3">
-                                <label for="search-ids-input" class="form-label">arXiv ID 精确搜索 (覆盖其他)</label>
-                                <textarea id="search-ids-input" class="form-control" rows="2" placeholder="每行一个ID, e.g., 2305.08721"></textarea>
+                                <label for="search-ids-input" class="form-label" data-i18n="arxiv_id_search_label"></label>
+                                <textarea id="search-ids-input" class="form-control" rows="2" data-i18n-placeholder="arxiv_id_search_placeholder"></textarea>
                             </div>
 
                              <!-- Universal arXiv Settings -->
                             <div class="mb-3">
-                                <label for="arxiv-sort-by-select" class="form-label">arXiv 排序方式</label>
+                                <label for="arxiv-sort-by-select" class="form-label" data-i18n="arxiv_sort_by"></label>
                                 <select id="arxiv-sort-by-select" class="form-select">
-                                    <option value="SubmittedDate">提交日期</option>
-                                    <option value="Relevance">相关性</option>
-                                    <option value="LastUpdatedDate">最后更新</option>
+                                    <option value="SubmittedDate" data-i18n="submitted_date"></option>
+                                    <option value="Relevance" data-i18n="relevance"></option>
+                                    <option value="LastUpdatedDate" data-i18n="last_updated_date"></option>
                                 </select>
                             </div>
                             <div class="mb-3">
-                                <label for="arxiv-sort-order-select" class="form-label">arXiv 排序顺序</label>
+                                <label for="arxiv-sort-order-select" class="form-label" data-i18n="arxiv_sort_order"></label>
                                 <select id="arxiv-sort-order-select" class="form-select">
-                                    <option value="Descending">降序</option>
-                                    <option value="Ascending">升序</option>
+                                    <option value="Descending" data-i18n="descending"></option>
+                                    <option value="Ascending" data-i18n="ascending"></option>
                                 </select>
                             </div>
                         </div>
@@ -284,25 +283,36 @@
             </div>
         </div>
         <div class="sidebar-footer">
-            <button id="start-crawl-btn" class="btn btn-primary w-100"><i class="bi bi-search"></i> 开始抓取</button>
+            <button id="start-crawl-btn" class="btn btn-primary w-100"><i class="bi bi-search"></i> <span data-i18n="start_fetching"></span></button>
         </div>
     </div>
 
     <!-- Main Content -->
     <div class="main-content">
         <div class="main-toolbar">
-            <button class="btn btn-sm btn-light me-3" id="toggle-settings-btn" title="切换设置面板"><i class="bi bi-layout-sidebar-inset"></i></button>
+            <button class="btn btn-sm btn-light me-3" id="toggle-settings-btn" data-i18n-title="toggle_settings_panel"><i class="bi bi-layout-sidebar-inset"></i></button>
             <div class="form-check me-3">
                 <input class="form-check-input" type="checkbox" value="" id="select-all-checkbox">
-                <label class="form-check-label" for="select-all-checkbox">全选</label>
+                <label class="form-check-label" for="select-all-checkbox" data-i18n="select_all"></label>
             </div>
-            <button id="batch-download-btn" class="btn btn-sm btn-success me-2" disabled><i class="bi bi-download"></i> 批量下载</button>
-            <button id="batch-delete-btn" class="btn btn-sm btn-danger me-3" disabled><i class="bi bi-trash"></i> 批量删除</button>
-            <button id="clear-new-btn" class="btn btn-sm btn-outline-secondary"><i class="bi bi-eraser"></i> 清除新条目</button>
+            <button id="batch-download-btn" class="btn btn-sm btn-success me-2" disabled><i class="bi bi-download"></i> <span data-i18n="batch_download"></span></button>
+            <button id="batch-delete-btn" class="btn btn-sm btn-danger me-3" disabled><i class="bi bi-trash"></i> <span data-i18n="batch_delete"></span></button>
+            <button id="clear-new-btn" class="btn btn-sm btn-outline-secondary"><i class="bi bi-eraser"></i> <span data-i18n="clear_new_entries"></span></button>
 
             <div class="ms-auto d-flex align-items-center">
+                <!-- Language Switcher -->
+                <div class="dropdown me-3">
+                    <button class="btn btn-sm btn-light dropdown-toggle" type="button" id="lang-switcher-btn" data-bs-toggle="dropdown" aria-expanded="false">
+                        <i class="bi bi-translate"></i> <span data-i18n="lang_switch"></span>
+                    </button>
+                    <ul class="dropdown-menu" aria-labelledby="lang-switcher-btn">
+                        <li><a class="dropdown-item" href="#" data-lang="zh"><span data-i18n="lang_zh"></span></a></li>
+                        <li><a class="dropdown-item" href="#" data-lang="en"><span data-i18n="lang_en"></span></a></li>
+                    </ul>
+                </div>
+
                 <select class="form-select form-select-sm" id="category-filter-select" style="width: auto;">
-                    <option value="">所有类别</option>
+                    <option value="" data-i18n="all_categories"></option>
                 </select>
                 <span id="status-text" class="ms-3 text-muted"></span>
             </div>
@@ -312,7 +322,7 @@
         </div>
         <div class="spinner-overlay d-none" id="loading-spinner">
             <div class="spinner-border text-primary" role="status">
-                <span class="visually-hidden">Loading...</span>
+                <span class="visually-hidden" data-i18n="loading"></span>
             </div>
         </div>
     </div>
@@ -320,7 +330,7 @@
     <!-- Right Details Panel -->
     <div class="details-panel" id="details-panel">
         <div class="details-header">
-            <h5 class="mb-0">论文详情</h5>
+            <h5 class="mb-0" data-i18n="paper_details"></h5>
             <button class="btn-close" id="close-details-btn"></button>
         </div>
         <div class="details-content" id="details-content-area">
@@ -328,14 +338,14 @@
              <div id="details-placeholder">
                 <div class="text-center text-muted mt-5">
                     <i class="bi bi-journal-text" style="font-size: 3rem;"></i>
-                    <p class="mt-2">从左侧列表选择一篇论文以查看详情</p>
+                    <p class="mt-2" data-i18n="details_placeholder"></p>
                 </div>
             </div>
         </div>
         <div class="details-footer d-none" id="details-actions">
-            <button class="btn btn-primary flex-grow-1" id="details-main-action-btn"><i class="bi bi-download"></i> 下载</button>
-            <button class="btn btn-secondary" id="details-open-file-btn" title="打开文件" disabled><i class="bi bi-file-earmark-arrow-up"></i></button>
-            <button class="btn btn-secondary" id="details-open-folder-btn" title="打开所在文件夹" disabled><i class="bi bi-folder2-open"></i></button>
+            <button class="btn btn-primary flex-grow-1" id="details-main-action-btn"><i class="bi bi-download"></i><span data-i18n="download"></span></button>
+            <button class="btn btn-secondary" id="details-open-file-btn" data-i18n-title="open_file" disabled><i class="bi bi-file-earmark-arrow-up"></i></button>
+            <button class="btn btn-secondary" id="details-open-folder-btn" data-i18n-title="open_folder" disabled><i class="bi bi-folder2-open"></i></button>
         </div>
     </div>
 
@@ -393,12 +403,65 @@ document.addEventListener('DOMContentLoaded', function () {
     let currentPapers = new Map(); // Use a map for easy access by pdf_url
     let selectedPaperUrl = null;
     let isCrawling = false;
+    let translations = {};
+    let currentLang = '{{ lang }}';
+
+    // --- I18n Functions ---
+    const applyTranslations = () => {
+        document.querySelectorAll('[data-i18n]').forEach(el => {
+            const key = el.getAttribute('data-i18n');
+            if (translations[key]) {
+                el.textContent = translations[key];
+            }
+        });
+        document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+            const key = el.getAttribute('data-i18n-placeholder');
+            if (translations[key]) {
+                el.placeholder = translations[key];
+            }
+        });
+        document.querySelectorAll('[data-i18n-title]').forEach(el => {
+            const key = el.getAttribute('data-i18n-title');
+            if (translations[key]) {
+                el.title = translations[key];
+            }
+        });
+
+        document.title = translations.app_title || 'Paper Fetching and Management Platform';
+
+        // Re-render components that might have translated text
+        filterAndRenderPaperList();
+        renderDetailsPanel();
+    };
+
+    const fetchAndSetLanguage = async (lang) => {
+        try {
+            const response = await fetch(`/api/translations?lang=${lang}`);
+            if (!response.ok) throw new Error('Network response was not ok');
+            translations = await response.json();
+            document.documentElement.lang = lang;
+            document.cookie = `lang=${lang};path=/;max-age=31536000;samesite=lax`;
+            currentLang = lang;
+            applyTranslations();
+
+            if (!window.initialDataLoaded) {
+                 window.initialDataLoaded = true;
+                 loadInitialData();
+            }
+        } catch (error) {
+            console.error('Failed to load translations:', error);
+            if (lang !== 'en') {
+                fetchAndSetLanguage('en');
+            }
+        }
+    };
+
 
     // --- Helper Functions ---
     const showLoading = (show) => {
         loadingSpinner.classList.toggle('d-none', !show);
         startCrawlBtn.disabled = show;
-        if(show) statusText.textContent = '抓取中...';
+        if(show) updateStatus(translations.status_fetching || 'Fetching...');
     };
 
     const updateStatus = (message) => {
@@ -409,12 +472,10 @@ document.addEventListener('DOMContentLoaded', function () {
         detailsPanel.classList.toggle('visible', show);
     };
 
-    const toggleAdvancedSettings = () => {
+    const updateLayoutForSearchMode = () => {
         const isKeywordMode = modeKeywordRadio.checked;
-        // Toggle basic settings visibility
         keywordSettings.style.display = isKeywordMode ? 'block' : 'none';
         categorySettings.style.display = isKeywordMode ? 'none' : 'block';
-        // Toggle advanced settings visibility
         advancedSettingsKeyword.style.display = isKeywordMode ? 'block' : 'none';
         advancedSettingsCategory.style.display = isKeywordMode ? 'none' : 'block';
     };
@@ -441,16 +502,16 @@ document.addEventListener('DOMContentLoaded', function () {
         let statusIcon = '';
         switch(status) {
             case 'new':
-                statusIcon = '<i class="bi bi-file-earmark text-muted" title="新发现"></i>';
+                statusIcon = `<i class="bi bi-file-earmark text-muted" title="${translations.status_new_title || 'New'}"></i>`;
                 break;
             case 'downloading':
                 statusIcon = `<div class="progress" style="height: 5px;"><div class="progress-bar" role="progressbar" style="width: ${progress}%"></div></div>`;
                 break;
             case 'downloaded':
-                statusIcon = '<i class="bi bi-check-circle-fill text-success" title="已下载"></i>';
+                statusIcon = `<i class="bi bi-check-circle-fill text-success" title="${translations.status_downloaded_title || 'Downloaded'}"></i>`;
                 break;
             case 'failed':
-                statusIcon = '<i class="bi bi-x-circle-fill text-danger" title="下载失败"></i>';
+                statusIcon = `<i class="bi bi-x-circle-fill text-danger" title="${translations.status_failed_title || 'Failed'}"></i>`;
                 break;
         }
 
@@ -473,7 +534,7 @@ document.addEventListener('DOMContentLoaded', function () {
         item.addEventListener('click', (e) => {
             if (e.target.type === 'checkbox') return;
             selectedPaperUrl = pdf_url;
-            filterAndRenderPaperList(); // To update active state
+            filterAndRenderPaperList();
             renderDetailsPanel();
             showDetailsPanel(true);
         });
@@ -496,7 +557,7 @@ document.addEventListener('DOMContentLoaded', function () {
         });
 
         const selectedValue = categoryFilterSelect.value;
-        categoryFilterSelect.innerHTML = '<option value="">所有类别</option>';
+        categoryFilterSelect.innerHTML = `<option value="">${translations.all_categories || 'All Categories'}</option>`;
         Array.from(uniqueCategories).sort().forEach(cat => {
             const option = document.createElement('option');
             option.value = cat;
@@ -519,7 +580,9 @@ document.addEventListener('DOMContentLoaded', function () {
         }
 
         if (papersToRender.length === 0) {
-            paperListPanel.innerHTML = `<div class="text-center text-muted p-5">没有在 "${filterCategory || '所有类别'}" 中的论文。</div>`;
+            const allCatText = translations.all_categories || 'All Categories';
+            const message = (translations.no_papers_in_category || 'No papers in "{category}"').replace('{category}', filterCategory || allCatText);
+            paperListPanel.innerHTML = `<div class="text-center text-muted p-5">${message}</div>`;
             return;
         }
 
@@ -550,21 +613,25 @@ document.addEventListener('DOMContentLoaded', function () {
         detailsHtml.innerHTML = `
             <h5>${paper.title}</h5>
             <p class="authors text-muted">${paper.authors}</p>
-            <p class="abstract">${paper.abstract || '无摘要信息。'}</p>
+            <p class="abstract">${paper.abstract || (translations.no_abstract_text || 'No abstract available.')}</p>
         `;
 
         detailsActions.classList.remove('d-none');
 
-        // Configure the main action button based on source and status
+        const mainActionBtnSpan = detailsMainActionBtn.querySelector('span');
+
         if (paper.status === 'downloaded') {
             detailsMainActionBtn.disabled = true;
-            detailsMainActionBtn.innerHTML = `<i class="bi bi-check-circle-fill"></i> 已下载`;
+            mainActionBtnSpan.textContent = translations.status_downloaded || 'Downloaded';
+            detailsMainActionBtn.querySelector('i').className = 'bi bi-check-circle-fill';
         } else if (paper.source === 'bioRxiv') {
             detailsMainActionBtn.disabled = false;
-            detailsMainActionBtn.innerHTML = `<i class="bi bi-box-arrow-up-right"></i> 在浏览器中打开`;
-        } else { // arXiv and others
+            mainActionBtnSpan.textContent = translations.open_in_browser_btn || 'Open in Browser';
+            detailsMainActionBtn.querySelector('i').className = 'bi bi-box-arrow-up-right';
+        } else {
             detailsMainActionBtn.disabled = false;
-            detailsMainActionBtn.innerHTML = `<i class="bi bi-download"></i> 下载`;
+            mainActionBtnSpan.textContent = translations.download || 'Download';
+            detailsMainActionBtn.querySelector('i').className = 'bi bi-download';
         }
 
         detailsOpenFileBtn.disabled = paper.status !== 'downloaded' || !paper.filepath;
@@ -574,18 +641,16 @@ document.addEventListener('DOMContentLoaded', function () {
     // --- API & Socket Functions ---
     const loadInitialData = async () => {
         try {
-            // Load config and categories in parallel
             const [configRes, catRes, dbPapersRes] = await Promise.all([
                 fetch('/api/config'),
                 fetch('/api/categories'),
-                fetch('/api/papers') // Also fetch already downloaded papers
+                fetch('/api/papers')
             ]);
 
             const config = await configRes.json();
             const categories = await catRes.json();
             const dbPapers = await dbPapersRes.json();
 
-            // Populate settings from config
             const settings = config.fetch_settings || {};
             keywordsInput.value = (config.keywords || []).join('\\n');
             authorsInput.value = (settings.search_by_authors || []).join('\\n');
@@ -598,15 +663,13 @@ document.addEventListener('DOMContentLoaded', function () {
             startDateInput.value = settings.search_start_date || '';
             endDateInput.value = settings.search_end_date || '';
 
-            // Set search mode and toggle advanced settings view
             if (settings.method === 'keyword') {
                 modeKeywordRadio.checked = true;
             } else {
                 modeCategoryRadio.checked = true;
             }
-            toggleAdvancedSettings();
+            updateLayoutForSearchMode();
 
-            // Populate categories
             arxivCatsCheckboxes.innerHTML = categories.arxiv.map(group => `
                 <div class="fw-bold mt-2">${group.group}</div>
                 ${group.categories.map(cat => `
@@ -623,25 +686,23 @@ document.addEventListener('DOMContentLoaded', function () {
                 </div>
             `).join('');
 
-            // Add already downloaded papers to the list
             dbPapers.forEach(p => {
                 p.status = 'downloaded';
                 currentPapers.set(p.pdf_url, p);
             });
             updateCategoryFilter();
             filterAndRenderPaperList();
-            updateStatus('就绪');
+            updateStatus(translations.status_ready || 'Ready');
 
         } catch (error) {
             console.error('Initialization failed:', error);
-            updateStatus('初始化失败');
+            updateStatus(translations.status_init_failed || 'Initialization Failed');
         }
     };
 
     // --- Socket.IO Handlers ---
     socket.on('connect', () => {
-        updateStatus('已连接');
-        loadInitialData();
+        updateStatus(translations.status_connected || 'Connected');
     });
 
     socket.on('status_update', (data) => updateStatus(data.status));
@@ -668,7 +729,6 @@ document.addEventListener('DOMContentLoaded', function () {
         if (currentPapers.has(data.pdf_url)) {
             const paper = currentPapers.get(data.pdf_url);
             paper.progress = data.progress;
-            // Re-render only the specific item for efficiency
             const itemEl = paperListPanel.querySelector(`[data-pdf-url="${data.pdf_url}"]`);
             if (itemEl) {
                 const statusEl = itemEl.querySelector('.paper-item-status');
@@ -685,9 +745,9 @@ document.addEventListener('DOMContentLoaded', function () {
             paper.status = 'downloaded';
             currentPapers.set(paper.pdf_url, paper);
             updateCategoryFilter();
-            filterAndRenderPaperList(); // Full re-render to update status icon
+            filterAndRenderPaperList();
             if (selectedPaperUrl === paper.pdf_url) {
-                renderDetailsPanel(); // Update details panel if it's the selected one
+                renderDetailsPanel();
             }
         }
     });
@@ -702,8 +762,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
     closeDetailsBtn.addEventListener('click', () => showDetailsPanel(false));
 
-    modeCategoryRadio.addEventListener('change', toggleAdvancedSettings);
-    modeKeywordRadio.addEventListener('change', toggleAdvancedSettings);
+    modeCategoryRadio.addEventListener('change', updateLayoutForSearchMode);
+    modeKeywordRadio.addEventListener('change', updateLayoutForSearchMode);
 
     startCrawlBtn.addEventListener('click', () => {
         if (isCrawling) return;
@@ -720,7 +780,6 @@ document.addEventListener('DOMContentLoaded', function () {
                 arxiv: getCheckedValues(arxivCatsCheckboxes),
                 biorxiv: getCheckedValues(biorxivCatsCheckboxes)
             },
-            // New advanced settings
             fetch_settings: {
                 arxiv_sort_by: arxivSortBySelect.value,
                 arxiv_sort_order: arxivSortOrderSelect.value,
@@ -753,7 +812,7 @@ document.addEventListener('DOMContentLoaded', function () {
         });
         if (papersToDownload.length > 0) {
             socket.emit('download_papers', { papers: papersToDownload });
-            filterAndRenderPaperList(); // Re-render to show "downloading" state
+            filterAndRenderPaperList();
         }
     });
 
@@ -763,10 +822,8 @@ document.addEventListener('DOMContentLoaded', function () {
             if (paper.status !== 'new') return;
 
             if (paper.source === 'bioRxiv') {
-                // Open in new tab for user to handle download
                 window.open(paper.pdf_url, '_blank');
             } else {
-                // Direct download for arXiv etc.
                 paper.status = 'downloading';
                 socket.emit('download_papers', { papers: [paper] });
                 filterAndRenderPaperList();
@@ -784,7 +841,8 @@ document.addEventListener('DOMContentLoaded', function () {
             });
         } catch (error) {
             console.error(`Failed to ${action}:`, error);
-            updateStatus(`打开 ${action === 'open_file' ? '文件' : '文件夹'} 失败`);
+            const target = action === 'open_file' ? (translations.open_file || 'file') : (translations.open_folder || 'folder');
+            updateStatus((translations.open_failed_msg || 'Failed to open {target}').replace('{target}', target));
         }
     };
 
@@ -806,7 +864,6 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     });
 
-    // Restore UI state from localStorage
     if (localStorage.getItem('settingsCollapsed') === 'true') {
         settingsPanel.classList.add('collapsed');
     }
@@ -824,11 +881,12 @@ document.addEventListener('DOMContentLoaded', function () {
         });
 
         if (paperIdsToDelete.length === 0) {
-            alert('请选择已下载的论文进行删除。');
+            alert(translations.alert_no_papers_to_delete || 'Please select downloaded papers to delete.');
             return;
         }
 
-        if (confirm(`确定要删除选中的 ${paperIdsToDelete.length} 篇论文吗？此操作将删除数据库记录和本地文件，且不可恢复。`)) {
+        const confirmMsg = (translations.confirm_delete_papers || 'Are you sure you want to delete {count} paper(s)?').replace('{count}', paperIdsToDelete.length);
+        if (confirm(confirmMsg)) {
             try {
                 const response = await fetch('/api/papers/delete', {
                     method: 'POST',
@@ -838,16 +896,15 @@ document.addEventListener('DOMContentLoaded', function () {
                 const result = await response.json();
                 if (response.ok) {
                     updateStatus(`${result.message}`);
-                    // Remove deleted papers from the map
                     papersToDelete.forEach(p => currentPapers.delete(p.pdf_url));
                     updateCategoryFilter();
                     filterAndRenderPaperList();
                 } else {
-                    throw new Error(result.message || '删除失败');
+                    throw new Error(result.message || 'Delete failed');
                 }
             } catch (error) {
-                console.error('删除论文失败:', error);
-                updateStatus(`删除失败: ${error.message}`);
+                console.error('Delete paper failed:', error);
+                updateStatus((translations.delete_failed_msg || 'Delete failed: {msg}').replace('{msg}', error.message));
             }
         }
     });
@@ -861,15 +918,28 @@ document.addEventListener('DOMContentLoaded', function () {
         });
 
         if (newPapersUrls.length > 0) {
-            if (confirm(`确定要清除 ${newPapersUrls.length} 个新发现的条目吗？`)) {
+            const confirmMsg = (translations.confirm_clear_new || 'Are you sure you want to clear {count} new entries?').replace('{count}', newPapersUrls.length);
+            if (confirm(confirmMsg)) {
                 newPapersUrls.forEach(url => currentPapers.delete(url));
                 updateCategoryFilter();
                 filterAndRenderPaperList();
             }
         } else {
-            alert('没有可清除的新条目。');
+            alert(translations.alert_no_new_entries || 'No new entries to clear.');
         }
     });
+
+    document.querySelectorAll('.dropdown-item[data-lang]').forEach(el => {
+        el.addEventListener('click', (e) => {
+            e.preventDefault();
+            const lang = e.currentTarget.getAttribute('data-lang');
+            if (lang !== currentLang) {
+                fetchAndSetLanguage(lang);
+            }
+        });
+    });
+
+    fetchAndSetLanguage(currentLang);
 });
     </script>
 </body>

@@ -8,12 +8,13 @@ import os
 import logging
 import platform
 import subprocess
-from flask import Flask, render_template, jsonify, request, send_from_directory
+from flask import Flask, render_template, jsonify, request, send_from_directory, g
 from flask_socketio import SocketIO
 import webbrowser
 import threading
 
 from src import config as cfg
+from src import i18n
 from src import utils
 from src import database
 from src import fetchers
@@ -44,10 +45,30 @@ crawler = Crawler(config, socketio)
 # --- HTTP 路由 (REST API) --- #
 
 
+@app.before_request
+def before_request():
+    """在每个请求之前运行，以确定并设置当前语言。"""
+    # 从查询参数、cookie或Accept-Language头中获取语言
+    lang = request.args.get('lang')
+    if lang is None:
+        lang = request.cookies.get('lang')
+    if lang is None:
+        lang = request.accept_languages.best_match(['en', 'zh'])
+    # 设置一个默认值
+    g.lang = lang or 'en'
+
+
 @app.route("/")
 def index():
     """渲染主页"""
-    return render_template("index.html")
+    # 将当前语言和翻译传递给模板
+    return render_template("index.html", lang=g.lang)
+
+
+@app.route("/api/translations")
+def get_translations():
+    """获取当前语言的翻译文本"""
+    return jsonify(i18n.get_translation(g.lang))
 
 
 @app.route("/api/config", methods=["GET"])

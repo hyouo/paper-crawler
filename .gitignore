@@ -19,3 +19,6 @@ pip-log.txt
 # 忽略存放下载的PDF和Markdown文件的文件夹
 paper/
 paper_crawler.db
+
+# Log files
+*.log

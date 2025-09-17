@@ -54,6 +54,17 @@ python -m src.main --mode keyword
 
 ---
 
+## 🌍 语言切换
+
+本项目支持中文和英文两种语言。
+
+- **Web UI**: 点击页面右上角的 `语言 (Language)` 下拉菜单即可实时切换。
+- **命令行**:
+    - 使用 `--lang` 参数启动，例如 `python -m src.main --lang zh`。
+    - 在交互模式下，如果没有通过参数指定语言，程序会首先提示您选择语言。
+
+---
+
 ## ⚙️ 配置说明 (`config.yaml`)
 
 你可以在 Web UI 中直接修改大部分常用配置，这些设置会自动保存到 `config.yaml`。
