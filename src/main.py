@@ -5,6 +5,7 @@ import logging
 import sys
 import questionary
 import copy
+import gettext
 from rich.console import Console
 from rich.progress import Progress
 
@@ -13,6 +14,16 @@ from .crawler import Crawler
 from .database import init_db
 from .utils import setup_logging
 from .fetchers import get_arxiv_categories, get_biorxiv_categories
+
+# Set up translation
+try:
+    # Attempt to use command-line argument for language
+    lang_arg = sys.argv[sys.argv.index('--lang') + 1] if '--lang' in sys.argv else 'en'
+except (ValueError, IndexError):
+    lang_arg = 'en'
+
+t = gettext.translation('messages', localedir='locales', languages=[lang_arg], fallback=True)
+_ = t.gettext
 
 logger = logging.getLogger(__name__)
 console = Console()
@@ -31,7 +42,7 @@ class CliApp:
         初始化应用程序，包括日志、数据库和参数解析。
         """
         setup_logging()
-        logger.info("Initializing database...")
+        logger.info(_("Initializing database..."))
         init_db()
         self.parse_arguments()
         self.load_configuration()
@@ -40,19 +51,26 @@ class CliApp:
         """
         解析命令行参数。
         """
-        parser = argparse.ArgumentParser(description="A command-line tool for fetching scientific papers.")
+        parser = argparse.ArgumentParser(description=_("A command-line tool for fetching scientific papers."))
         parser.add_argument(
             "--config",
             type=str,
             default="config.yaml",
-            help="Path to the configuration file.",
+            help=_("Path to the configuration file."),
         )
         parser.add_argument(
             "--mode",
             type=str,
             choices=["keyword", "category", "interactive"],
             default="interactive", # Default to interactive if no mode is specified
-            help="Set the fetch mode. 'interactive' will start a guided session.",
+            help=_("Set the fetch mode. 'interactive' will start a guided session."),
+        )
+        parser.add_argument(
+            "--lang",
+            type=str,
+            default="en",
+            choices=["en", "zh"],
+            help=_("Set the display language."),
         )
         self.args = parser.parse_args()
 
@@ -62,12 +80,12 @@ class CliApp:
         """
         try:
             self.config_data = config.load_config(self.args.config)
-            logger.info(f"Configuration loaded from '{self.args.config}'.")
+            logger.info(_("Configuration loaded from '{}'.").format(self.args.config))
         except FileNotFoundError as e:
-            logger.error(f"Configuration file not found: {e}")
+            logger.error(_("Configuration file not found: {}").format(e))
             sys.exit(1)
         except Exception as e:
-            logger.error(f"Error loading configuration: {e}")
+            logger.error(_("Error loading configuration: {}").format(e))
             sys.exit(1)
 
     def run(self):
@@ -93,7 +111,7 @@ class CliApp:
             if "keywords" in runtime_config:
                 final_config["keywords"] = runtime_config["keywords"]
 
-        console.rule(f"[bold blue]Executing Crawl: {fetch_method}[/bold blue]")
+        console.rule(_("[bold blue]Executing Crawl: {}[/bold blue]").format(fetch_method))
 
         crawler = Crawler(final_config, socketio=None)
 
@@ -103,38 +121,38 @@ class CliApp:
         new_papers = crawler._run_crawl_task(fetch_method, categories_to_fetch)
 
         if not new_papers:
-            logger.info("没有找到需要下载的新论文。")
+            logger.info(_("No new papers found to download."))
         else:
-            console.rule(f"[bold blue]开始下载 {len(new_papers)} 篇新论文[/bold blue]")
+            console.rule(_("[bold blue]Starting download of {} new papers[/bold blue]").format(len(new_papers)))
             with Progress(console=console) as progress:
-                task = progress.add_task("[green]下载中...", total=len(new_papers))
+                task = progress.add_task(_("[green]Downloading...[/green]"), total=len(new_papers))
                 for paper in new_papers:
-                    logger.info(f"正在下载: {paper['title']}")
+                    logger.info(_("Downloading: {}").format(paper['title']))
                     # Note: _download_paper is now private. We use the public method.
                     # The public method handles DB interaction and notifications (which are suppressed w/o socketio).
                     crawler.download_single_paper(paper)
                     progress.update(task, advance=1)
 
-        logger.info("所有任务完成。")
-        console.rule("[bold green]Done[/bold green]")
+        logger.info(_("All tasks completed."))
+        console.rule(_("[bold green]Done[/bold green]"))
 
     def run_interactive_entry(self):
         """
         交互模式的入口点，让用户选择快速模式或预设模式。
         """
-        console.rule("[bold blue]Interactive Mode[/bold blue]")
+        console.rule(_("[bold blue]Interactive Mode[/bold blue]"))
 
         run_mode = questionary.select(
-            "Welcome! How would you like to run the crawler?",
+            _("Welcome! How would you like to run the crawler?"),
             choices=[
-                {"name": "Quick Mode - Use settings from config.yaml", "value": "quick"},
-                {"name": "Preset Mode - Interactively choose settings for this run", "value": "preset"},
-                {"name": "Exit", "value": "exit"},
+                {"name": _("Quick Mode - Use settings from config.yaml"), "value": "quick"},
+                {"name": _("Preset Mode - Interactively choose settings for this run"), "value": "preset"},
+                {"name": _("Exit"), "value": "exit"},
             ],
         ).ask()
 
         if run_mode is None or run_mode == "exit":
-            logger.info("Exiting.")
+            logger.info(_("Exiting."))
             return
 
         if run_mode == "quick":
@@ -147,13 +165,13 @@ class CliApp:
         """
         引导用户完成抓取参数的设置。
         """
-        console.print("\n[bold green]Starting Preset Mode Setup...[/bold green]")
+        console.print(_("\n[bold green]Starting Preset Mode Setup...[/bold green]"))
 
         fetch_method = questionary.select(
-            "First, choose a fetch mode:",
+            _("First, choose a fetch mode:"),
             choices=[
-                {"name": "Category - Fetch papers from specific scientific categories", "value": "category"},
-                {"name": "Keyword - Fetch papers using a list of keywords", "value": "keyword"},
+                {"name": _("Category - Fetch papers from specific scientific categories"), "value": "category"},
+                {"name": _("Keyword - Fetch papers using a list of keywords"), "value": "keyword"},
             ],
         ).ask()
 
@@ -162,38 +180,38 @@ class CliApp:
         runtime_config = {"categories": {"arxiv": [], "biorxiv": []}, "keywords": []}
 
         if fetch_method == 'category':
-            console.print("\n[bold]Fetching available categories...[/bold]")
+            console.print(_("\n[bold]Fetching available categories...[/bold]"))
             arxiv_choices = self._format_arxiv_choices()
             biorxiv_choices = self._format_biorxiv_choices()
 
-            console.print("Use [bold]spacebar[/bold] to select/deselect, [bold]enter[/bold] to confirm.")
+            console.print(_("Use [bold]spacebar[/bold] to select/deselect, [bold]enter[/bold] to confirm."))
 
-            selected_arxiv = questionary.checkbox("Select arXiv categories:", choices=arxiv_choices).ask()
+            selected_arxiv = questionary.checkbox(_("Select arXiv categories:"), choices=arxiv_choices).ask()
             if selected_arxiv is None: return
 
-            selected_biorxiv = questionary.checkbox("Select bioRxiv categories:", choices=biorxiv_choices).ask()
+            selected_biorxiv = questionary.checkbox(_("Select bioRxiv categories:"), choices=biorxiv_choices).ask()
             if selected_biorxiv is None: return
 
             runtime_config["categories"]["arxiv"] = selected_arxiv
             runtime_config["categories"]["biorxiv"] = selected_biorxiv
 
         elif fetch_method == 'keyword':
-            console.print("\n[bold]Enter keywords, one per line. Press ESC followed by Enter when done.[/bold]")
+            console.print(_("\n[bold]Enter keywords, one per line. Press ESC followed by Enter when done.[/bold]"))
             keywords = questionary.multiline(
-                "Keywords:",
+                _("Keywords:"),
                 marker=">",
-                validate=lambda text: True if len(text.strip()) > 0 else "Please enter at least one keyword."
+                validate=lambda text: True if len(text.strip()) > 0 else _("Please enter at least one keyword.")
             ).ask()
             if keywords is None: return
             runtime_config["keywords"] = [kw.strip() for kw in keywords.strip().split('\n')]
 
-        console.print("\n[bold blue]Configuration for this run:[/bold blue]")
+        console.print(_("\n[bold blue]Configuration for this run:[/bold blue]"))
         console.print(runtime_config)
 
-        if questionary.confirm("Proceed with crawling?").ask():
+        if questionary.confirm(_("Proceed with crawling?")).ask():
             self.run_direct_mode(fetch_method, runtime_config)
         else:
-            logger.info("Crawl cancelled by user.")
+            logger.info(_("Crawl cancelled by user."))
 
     def _format_arxiv_choices(self):
         """Formats arXiv categories for questionary."""

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>论文抓取与管理平台 (重构版)</title>
+    <title data-i18n-key="pageTitle">论文抓取与管理平台 (重构版)</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
     <style>
@@ -170,28 +170,28 @@
     <!-- Left Sidebar -->
     <div class="sidebar" id="settings-panel">
         <div class="sidebar-header">
-            <h5 class="mb-0"><i class="bi bi-gear-fill"></i> 设置</h5>
+            <h5 class="mb-0"><i class="bi bi-gear-fill"></i> <span data-i18n-key="settingsTitle">设置</span></h5>
         </div>
         <div class="sidebar-content">
             <!-- Search Mode -->
             <div class="mb-3">
-                <label class="form-label fw-bold">搜索模式</label>
+                <label class="form-label fw-bold" data-i18n-key="searchMode">搜索模式</label>
                 <div class="btn-group w-100">
                     <input type="radio" class="btn-check" name="search-mode" id="mode-category" value="category" autocomplete="off" checked>
-                    <label class="btn btn-outline-primary" for="mode-category">按分类</label>
+                    <label class="btn btn-outline-primary" for="mode-category" data-i18n-key="modeByCategory">按分类</label>
                     <input type="radio" class="btn-check" name="search-mode" id="mode-keyword" value="keyword" autocomplete="off">
-                    <label class="btn btn-outline-primary" for="mode-keyword">按关键词</label>
+                    <label class="btn btn-outline-primary" for="mode-keyword" data-i18n-key="modeByKeyword">按关键词</label>
                 </div>
             </div>
 
             <!-- Category Settings -->
             <div id="category-settings">
                 <div class="mb-3">
-                    <label class="form-label">arXiv 分类</label>
+                    <label class="form-label" data-i18n-key="arxivCategories">arXiv 分类</label>
                     <div id="arxiv-cats-checkboxes" class="border rounded p-2" style="max-height: 150px; overflow-y: auto;"></div>
                 </div>
                 <div class="mb-3">
-                    <label class="form-label">bioRxiv 分类</label>
+                    <label class="form-label" data-i18n-key="biorxivCategories">bioRxiv 分类</label>
                     <div id="biorxiv-cats-checkboxes" class="border rounded p-2" style="max-height: 150px; overflow-y: auto;"></div>
                 </div>
             </div>
@@ -199,7 +199,7 @@
             <!-- Keyword Settings -->
             <div id="keyword-settings" class="d-none">
                 <div class="mb-3">
-                    <label for="keywords-input" class="form-label">关键词 (每行一个)</label>
+                    <label for="keywords-input" class="form-label" data-i18n-key="keywordsLabel">关键词 (每行一个)</label>
                     <textarea id="keywords-input" class="form-control" rows="3"></textarea>
                 </div>
             </div>
@@ -208,25 +208,25 @@
             <div class="accordion" id="advanced-settings-accordion">
                 <div class="accordion-item">
                     <h2 class="accordion-header">
-                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-advanced">
+                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-advanced" data-i18n-key="advancedSettings">
                             高级设置
                         </button>
                     </h2>
                     <div id="collapse-advanced" class="accordion-collapse collapse">
                         <div class="accordion-body">
                             <div class="mb-3">
-                                <label for="authors-input" class="form-label">作者 (每行一个)</label>
+                                <label for="authors-input" class="form-label" data-i18n-key="authorsLabel">作者 (每行一个)</label>
                                 <textarea id="authors-input" class="form-control" rows="2"></textarea>
                             </div>
 
                             <!-- Date Range -->
                             <div class="row g-2 mb-3">
                                 <div class="col">
-                                    <label for="start-date-input" class="form-label">开始日期</label>
+                                    <label for="start-date-input" class="form-label" data-i18n-key="startDate">开始日期</label>
                                     <input type="date" id="start-date-input" class="form-control">
                                 </div>
                                 <div class="col">
-                                    <label for="end-date-input" class="form-label">结束日期</label>
+                                    <label for="end-date-input" class="form-label" data-i18n-key="endDate">结束日期</label>
                                     <input type="date" id="end-date-input" class="form-control">
                                 </div>
                             </div>
@@ -234,15 +234,15 @@
                             <!-- Keyword-Mode Specific Settings -->
                             <div id="advanced-settings-keyword">
                                 <div class="mb-3">
-                                    <label for="keyword-field-select" class="form-label">关键词搜索范围</label>
+                                    <label for="keyword-field-select" class="form-label" data-i18n-key="keywordSearchScope">关键词搜索范围</label>
                                     <select id="keyword-field-select" class="form-select">
-                                        <option value="all">所有字段</option>
-                                        <option value="title">仅标题</option>
-                                        <option value="abstract">仅摘要</option>
+                                        <option value="all" data-i18n-key="allFields">所有字段</option>
+                                        <option value="title" data-i18n-key="titleOnly">仅标题</option>
+                                        <option value="abstract" data-i18n-key="abstractOnly">仅摘要</option>
                                     </select>
                                 </div>
                                 <div class="mb-3">
-                                    <label for="max-results-input" class="form-label">关键词模式最大获取数</label>
+                                    <label for="max-results-input" class="form-label" data-i18n-key="maxResultsKw">关键词模式最大获取数</label>
                                     <input type="number" id="max-results-input" class="form-control" value="100">
                                 </div>
                             </div>
@@ -250,7 +250,7 @@
                             <!-- Category-Mode Specific Settings -->
                             <div id="advanced-settings-category">
                                 <div class="mb-3">
-                                    <label for="max-per-category-input" class="form-label">分类模式每类最大获取数</label>
+                                    <label for="max-per-category-input" class="form-label" data-i18n-key="maxPerCategory">分类模式每类最大获取数</label>
                                     <input type="number" id="max-per-category-input" class="form-control" value="10">
                                 </div>
                             </div>
@@ -258,24 +258,24 @@
                             <hr>
 
                             <div class="mb-3">
-                                <label for="search-ids-input" class="form-label">arXiv ID 精确搜索 (覆盖其他)</label>
-                                <textarea id="search-ids-input" class="form-control" rows="2" placeholder="每行一个ID, e.g., 2305.08721"></textarea>
+                                <label for="search-ids-input" class="form-label" data-i18n-key="arxivIdSearch">arXiv ID 精确搜索 (覆盖其他)</label>
+                                <textarea id="search-ids-input" class="form-control" rows="2" data-i18n-key="arxivIdPlaceholder" data-i18n-target="placeholder" placeholder="每行一个ID, e.g., 2305.08721"></textarea>
                             </div>
 
                              <!-- Universal arXiv Settings -->
                             <div class="mb-3">
-                                <label for="arxiv-sort-by-select" class="form-label">arXiv 排序方式</label>
+                                <label for="arxiv-sort-by-select" class="form-label" data-i18n-key="arxivSortBy">arXiv 排序方式</label>
                                 <select id="arxiv-sort-by-select" class="form-select">
-                                    <option value="SubmittedDate">提交日期</option>
-                                    <option value="Relevance">相关性</option>
-                                    <option value="LastUpdatedDate">最后更新</option>
+                                    <option value="SubmittedDate" data-i18n-key="sortBySubmitDate">提交日期</option>
+                                    <option value="Relevance" data-i18n-key="sortByRelevance">相关性</option>
+                                    <option value="LastUpdatedDate" data-i18n-key="sortByUpdateDate">最后更新</option>
                                 </select>
                             </div>
                             <div class="mb-3">
-                                <label for="arxiv-sort-order-select" class="form-label">arXiv 排序顺序</label>
+                                <label for="arxiv-sort-order-select" class="form-label" data-i18n-key="arxivSortOrder">arXiv 排序顺序</label>
                                 <select id="arxiv-sort-order-select" class="form-select">
-                                    <option value="Descending">降序</option>
-                                    <option value="Ascending">升序</option>
+                                    <option value="Descending" data-i18n-key="sortDescending">降序</option>
+                                    <option value="Ascending" data-i18n-key="sortAscending">升序</option>
                                 </select>
                             </div>
                         </div>
@@ -284,25 +284,29 @@
             </div>
         </div>
         <div class="sidebar-footer">
-            <button id="start-crawl-btn" class="btn btn-primary w-100"><i class="bi bi-search"></i> 开始抓取</button>
+            <button id="start-crawl-btn" class="btn btn-primary w-100"><i class="bi bi-search"></i> <span data-i18n-key="startFetching">开始抓取</span></button>
         </div>
     </div>
 
     <!-- Main Content -->
     <div class="main-content">
         <div class="main-toolbar">
-            <button class="btn btn-sm btn-light me-3" id="toggle-settings-btn" title="切换设置面板"><i class="bi bi-layout-sidebar-inset"></i></button>
+            <button class="btn btn-sm btn-light me-3" id="toggle-settings-btn" data-i18n-key="toggleSettings" data-i18n-target="title" title="切换设置面板"><i class="bi bi-layout-sidebar-inset"></i></button>
             <div class="form-check me-3">
                 <input class="form-check-input" type="checkbox" value="" id="select-all-checkbox">
-                <label class="form-check-label" for="select-all-checkbox">全选</label>
+                <label class="form-check-label" for="select-all-checkbox" data-i18n-key="selectAll">全选</label>
             </div>
-            <button id="batch-download-btn" class="btn btn-sm btn-success me-2" disabled><i class="bi bi-download"></i> 批量下载</button>
-            <button id="batch-delete-btn" class="btn btn-sm btn-danger me-3" disabled><i class="bi bi-trash"></i> 批量删除</button>
-            <button id="clear-new-btn" class="btn btn-sm btn-outline-secondary"><i class="bi bi-eraser"></i> 清除新条目</button>
+            <button id="batch-download-btn" class="btn btn-sm btn-success me-2" disabled><i class="bi bi-download"></i> <span data-i18n-key="batchDownload">批量下载</span></button>
+            <button id="batch-delete-btn" class="btn btn-sm btn-danger me-3" disabled><i class="bi bi-trash"></i> <span data-i18n-key="batchDelete">批量删除</span></button>
+            <button id="clear-new-btn" class="btn btn-sm btn-outline-secondary"><i class="bi bi-eraser"></i> <span data-i18n-key="clearNewItems">清除新条目</span></button>
 
             <div class="ms-auto d-flex align-items-center">
+                <div class="btn-group btn-group-sm me-3">
+                    <button type="button" class="btn btn-outline-secondary" id="lang-zh">中</button>
+                    <button type="button" class="btn btn-outline-secondary" id="lang-en">EN</button>
+                </div>
                 <select class="form-select form-select-sm" id="category-filter-select" style="width: auto;">
-                    <option value="">所有类别</option>
+                    <option value="" data-i18n-key="allCategories">所有类别</option>
                 </select>
                 <span id="status-text" class="ms-3 text-muted"></span>
             </div>
@@ -312,7 +316,7 @@
         </div>
         <div class="spinner-overlay d-none" id="loading-spinner">
             <div class="spinner-border text-primary" role="status">
-                <span class="visually-hidden">Loading...</span>
+                <span class="visually-hidden" data-i18n-key="loading">Loading...</span>
             </div>
         </div>
     </div>
@@ -320,7 +324,7 @@
     <!-- Right Details Panel -->
     <div class="details-panel" id="details-panel">
         <div class="details-header">
-            <h5 class="mb-0">论文详情</h5>
+            <h5 class="mb-0" data-i18n-key="paperDetailsTitle">论文详情</h5>
             <button class="btn-close" id="close-details-btn"></button>
         </div>
         <div class="details-content" id="details-content-area">
@@ -328,21 +332,191 @@
              <div id="details-placeholder">
                 <div class="text-center text-muted mt-5">
                     <i class="bi bi-journal-text" style="font-size: 3rem;"></i>
-                    <p class="mt-2">从左侧列表选择一篇论文以查看详情</p>
+                    <p class="mt-2" data-i18n-key="selectPaperPrompt">从左侧列表选择一篇论文以查看详情</p>
                 </div>
             </div>
         </div>
         <div class="details-footer d-none" id="details-actions">
-            <button class="btn btn-primary flex-grow-1" id="details-main-action-btn"><i class="bi bi-download"></i> 下载</button>
-            <button class="btn btn-secondary" id="details-open-file-btn" title="打开文件" disabled><i class="bi bi-file-earmark-arrow-up"></i></button>
-            <button class="btn btn-secondary" id="details-open-folder-btn" title="打开所在文件夹" disabled><i class="bi bi-folder2-open"></i></button>
+            <button class="btn btn-primary flex-grow-1" id="details-main-action-btn"><i class="bi bi-download"></i> <span data-i18n-key="download">下载</span></button>
+            <button class="btn btn-secondary" id="details-open-file-btn" data-i18n-key="openFile" data-i18n-target="title" title="打开文件" disabled><i class="bi bi-file-earmark-arrow-up"></i></button>
+            <button class="btn btn-secondary" id="details-open-folder-btn" data-i18n-key="openFolder" data-i18n-target="title" title="打开所在文件夹" disabled><i class="bi bi-folder2-open"></i></button>
         </div>
     </div>
 
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <script>
+// --- I18n ---
+const translations = {
+    zh: {
+        pageTitle: "论文抓取与管理平台 (重构版)",
+        settingsTitle: "设置",
+        searchMode: "搜索模式",
+        modeByCategory: "按分类",
+        modeByKeyword: "按关键词",
+        arxivCategories: "arXiv 分类",
+        biorxivCategories: "bioRxiv 分类",
+        keywordsLabel: "关键词 (每行一个)",
+        advancedSettings: "高级设置",
+        authorsLabel: "作者 (每行一个)",
+        startDate: "开始日期",
+        endDate: "结束日期",
+        keywordSearchScope: "关键词搜索范围",
+        allFields: "所有字段",
+        titleOnly: "仅标题",
+        abstractOnly: "仅摘要",
+        maxResultsKw: "关键词模式最大获取数",
+        maxPerCategory: "分类模式每类最大获取数",
+        arxivIdSearch: "arXiv ID 精确搜索 (覆盖其他)",
+        arxivIdPlaceholder: "每行一个ID, e.g., 2305.08721",
+        arxivSortBy: "arXiv 排序方式",
+        sortBySubmitDate: "提交日期",
+        sortByRelevance: "相关性",
+        sortByUpdateDate: "最后更新",
+        arxivSortOrder: "arXiv 排序顺序",
+        sortDescending: "降序",
+        sortAscending: "升序",
+        startFetching: "开始抓取",
+        toggleSettings: "切换设置面板",
+        selectAll: "全选",
+        batchDownload: "批量下载",
+        batchDelete: "批量删除",
+        clearNewItems: "清除新条目",
+        allCategories: "所有类别",
+        loading: "加载中...",
+        paperDetailsTitle: "论文详情",
+        selectPaperPrompt: "从左侧列表选择一篇论文以查看详情",
+        download: "下载",
+        openFile: "打开文件",
+        openFolder: "打开所在文件夹",
+        statusReady: "就绪",
+        statusFetching: "抓取中...",
+        statusConnected: "已连接",
+        statusInitFailed: "初始化失败",
+        statusOpenFileFailed: "打开文件失败",
+        statusOpenFolderFailed: "打开文件夹失败",
+        noPapersFound: "没有在 \"{category}\" 中的论文。",
+        noAbstract: "无摘要信息。",
+        openInBrowser: "在浏览器中打开",
+        downloaded: "已下载",
+        statusIconNew: "新发现",
+        statusIconDownloaded: "已下载",
+        statusIconFailed: "下载失败",
+        confirmDelete: "确定要删除选中的 {count} 篇论文吗？此操作将删除数据库记录和本地文件，且不可恢复。",
+        confirmClear: "确定要清除 {count} 个新发现的条目吗？",
+        alertNoPapersToDelete: "请选择已下载的论文进行删除。",
+        alertNoNewItems: "没有可清除的新条目。"
+    },
+    en: {
+        pageTitle: "Paper Fetcher & Manager (Refactored)",
+        settingsTitle: "Settings",
+        searchMode: "Search Mode",
+        modeByCategory: "By Category",
+        modeByKeyword: "By Keyword",
+        arxivCategories: "arXiv Categories",
+        biorxivCategories: "bioRxiv Categories",
+        keywordsLabel: "Keywords (one per line)",
+        advancedSettings: "Advanced Settings",
+        authorsLabel: "Authors (one per line)",
+        startDate: "Start Date",
+        endDate: "End Date",
+        keywordSearchScope: "Keyword Search Scope",
+        allFields: "All Fields",
+        titleOnly: "Title Only",
+        abstractOnly: "Abstract Only",
+        maxResultsKw: "Max Results (Keyword Mode)",
+        maxPerCategory: "Max Per Category (Category Mode)",
+        arxivIdSearch: "arXiv ID Search (Overrides others)",
+        arxivIdPlaceholder: "One ID per line, e.g., 2305.08721",
+        arxivSortBy: "arXiv Sort By",
+        sortBySubmitDate: "Submission Date",
+        sortByRelevance: "Relevance",
+        sortByUpdateDate: "Last Updated",
+        arxivSortOrder: "arXiv Sort Order",
+        sortDescending: "Descending",
+        sortAscending: "Ascending",
+        startFetching: "Start Fetching",
+        toggleSettings: "Toggle Settings Panel",
+        selectAll: "Select All",
+        batchDownload: "Batch Download",
+        batchDelete: "Batch Delete",
+        clearNewItems: "Clear New Items",
+        allCategories: "All Categories",
+        loading: "Loading...",
+        paperDetailsTitle: "Paper Details",
+        selectPaperPrompt: "Select a paper from the list to see details",
+        download: "Download",
+        openFile: "Open File",
+        openFolder: "Open Folder",
+        statusReady: "Ready",
+        statusFetching: "Fetching...",
+        statusConnected: "Connected",
+        statusInitFailed: "Initialization Failed",
+        statusOpenFileFailed: "Failed to open file",
+        statusOpenFolderFailed: "Failed to open folder",
+        noPapersFound: "No papers found in \"{category}\".",
+        noAbstract: "No abstract available.",
+        openInBrowser: "Open in Browser",
+        downloaded: "Downloaded",
+        statusIconNew: "New",
+        statusIconDownloaded: "Downloaded",
+        statusIconFailed: "Failed",
+        confirmDelete: "Are you sure you want to delete the selected {count} paper(s)? This will delete the database record and local file and cannot be undone.",
+        confirmClear: "Are you sure you want to clear {count} new items?",
+        alertNoPapersToDelete: "Please select downloaded papers to delete.",
+        alertNoNewItems: "No new items to clear."
+    }
+};
+
+let currentLang = 'zh';
+
+function i18n(key, replacements = {}) {
+    let text = translations[currentLang][key] || key;
+    for (const [placeholder, value] of Object.entries(replacements)) {
+        text = text.replace(`{${placeholder}}`, value);
+    }
+    return text;
+}
+
+function setLanguage(lang) {
+    currentLang = lang;
+    localStorage.setItem('preferredLanguage', lang);
+    document.documentElement.lang = lang === 'zh' ? 'zh-CN' : 'en';
+
+    document.querySelectorAll('[data-i18n-key]').forEach(el => {
+        const key = el.dataset.i18nKey;
+        const target = el.dataset.i18nTarget || 'innerText';
+        if (translations[lang] && translations[lang][key]) {
+            if (target === 'innerText') {
+                // Handle elements that may contain other elements (like icons)
+                const icon = el.querySelector('i');
+                if (icon) {
+                    el.innerHTML = icon.outerHTML + ' ' + translations[lang][key];
+                } else {
+                    el.innerText = translations[lang][key];
+                }
+            } else {
+                el[target] = translations[lang][key];
+            }
+        }
+    });
+
+    // Update buttons state
+    document.getElementById('lang-zh').classList.toggle('active', lang === 'zh');
+    document.getElementById('lang-en').classList.toggle('active', lang === 'en');
+
+    // Re-render dynamic content
+    filterAndRenderPaperList();
+    renderDetailsPanel();
+    updateStatus(i18n('statusReady'));
+}
+
+
 document.addEventListener('DOMContentLoaded', function () {
+    // --- I18n Buttons ---
+    document.getElementById('lang-zh').addEventListener('click', () => setLanguage('zh'));
+    document.getElementById('lang-en').addEventListener('click', () => setLanguage('en'));
+
     const socket = io();
 
     // --- DOM Elements ---
@@ -398,7 +572,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const showLoading = (show) => {
         loadingSpinner.classList.toggle('d-none', !show);
         startCrawlBtn.disabled = show;
-        if(show) statusText.textContent = '抓取中...';
+        if(show) updateStatus(i18n('statusFetching'));
     };
 
     const updateStatus = (message) => {
@@ -441,16 +615,16 @@ document.addEventListener('DOMContentLoaded', function () {
         let statusIcon = '';
         switch(status) {
             case 'new':
-                statusIcon = '<i class="bi bi-file-earmark text-muted" title="新发现"></i>';
+                statusIcon = `<i class="bi bi-file-earmark text-muted" title="${i18n('statusIconNew')}"></i>`;
                 break;
             case 'downloading':
                 statusIcon = `<div class="progress" style="height: 5px;"><div class="progress-bar" role="progressbar" style="width: ${progress}%"></div></div>`;
                 break;
             case 'downloaded':
-                statusIcon = '<i class="bi bi-check-circle-fill text-success" title="已下载"></i>';
+                statusIcon = `<i class="bi bi-check-circle-fill text-success" title="${i18n('statusIconDownloaded')}"></i>`;
                 break;
             case 'failed':
-                statusIcon = '<i class="bi bi-x-circle-fill text-danger" title="下载失败"></i>';
+                statusIcon = `<i class="bi bi-x-circle-fill text-danger" title="${i18n('statusIconFailed')}"></i>`;
                 break;
         }
 
@@ -496,7 +670,7 @@ document.addEventListener('DOMContentLoaded', function () {
         });
 
         const selectedValue = categoryFilterSelect.value;
-        categoryFilterSelect.innerHTML = '<option value="">所有类别</option>';
+        categoryFilterSelect.innerHTML = `<option value="">${i18n('allCategories')}</option>`;
         Array.from(uniqueCategories).sort().forEach(cat => {
             const option = document.createElement('option');
             option.value = cat;
@@ -519,7 +693,7 @@ document.addEventListener('DOMContentLoaded', function () {
         }
 
         if (papersToRender.length === 0) {
-            paperListPanel.innerHTML = `<div class="text-center text-muted p-5">没有在 "${filterCategory || '所有类别'}" 中的论文。</div>`;
+            paperListPanel.innerHTML = `<div class="text-center text-muted p-5">${i18n('noPapersFound', {category: filterCategory || i18n('allCategories')})}</div>`;
             return;
         }
 
@@ -550,21 +724,27 @@ document.addEventListener('DOMContentLoaded', function () {
         detailsHtml.innerHTML = `
             <h5>${paper.title}</h5>
             <p class="authors text-muted">${paper.authors}</p>
-            <p class="abstract">${paper.abstract || '无摘要信息。'}</p>
+            <p class="abstract">${paper.abstract || i18n('noAbstract')}</p>
         `;
 
         detailsActions.classList.remove('d-none');
 
+        const mainActionButtonSpan = detailsMainActionBtn.querySelector('span');
+        const mainActionButtonIcon = detailsMainActionBtn.querySelector('i');
+
         // Configure the main action button based on source and status
         if (paper.status === 'downloaded') {
             detailsMainActionBtn.disabled = true;
-            detailsMainActionBtn.innerHTML = `<i class="bi bi-check-circle-fill"></i> 已下载`;
+            mainActionButtonIcon.className = 'bi bi-check-circle-fill';
+            if (mainActionButtonSpan) mainActionButtonSpan.innerText = i18n('downloaded');
         } else if (paper.source === 'bioRxiv') {
             detailsMainActionBtn.disabled = false;
-            detailsMainActionBtn.innerHTML = `<i class="bi bi-box-arrow-up-right"></i> 在浏览器中打开`;
+            mainActionButtonIcon.className = 'bi bi-box-arrow-up-right';
+            if (mainActionButtonSpan) mainActionButtonSpan.innerText = i18n('openInBrowser');
         } else { // arXiv and others
             detailsMainActionBtn.disabled = false;
-            detailsMainActionBtn.innerHTML = `<i class="bi bi-download"></i> 下载`;
+            mainActionButtonIcon.className = 'bi bi-download';
+            if (mainActionButtonSpan) mainActionButtonSpan.innerText = i18n('download');
         }
 
         detailsOpenFileBtn.disabled = paper.status !== 'downloaded' || !paper.filepath;
@@ -630,17 +810,17 @@ document.addEventListener('DOMContentLoaded', function () {
             });
             updateCategoryFilter();
             filterAndRenderPaperList();
-            updateStatus('就绪');
+            updateStatus(i18n('statusReady'));
 
         } catch (error) {
             console.error('Initialization failed:', error);
-            updateStatus('初始化失败');
+            updateStatus(i18n('statusInitFailed'));
         }
     };
 
     // --- Socket.IO Handlers ---
     socket.on('connect', () => {
-        updateStatus('已连接');
+        updateStatus(i18n('statusConnected'));
         loadInitialData();
     });
 
@@ -784,7 +964,7 @@ document.addEventListener('DOMContentLoaded', function () {
             });
         } catch (error) {
             console.error(`Failed to ${action}:`, error);
-            updateStatus(`打开 ${action === 'open_file' ? '文件' : '文件夹'} 失败`);
+            updateStatus(i18n(action === 'open_file' ? 'statusOpenFileFailed' : 'statusOpenFolderFailed'));
         }
     };
 
@@ -824,11 +1004,11 @@ document.addEventListener('DOMContentLoaded', function () {
         });
 
         if (paperIdsToDelete.length === 0) {
-            alert('请选择已下载的论文进行删除。');
+            alert(i18n('alertNoPapersToDelete'));
             return;
         }
 
-        if (confirm(`确定要删除选中的 ${paperIdsToDelete.length} 篇论文吗？此操作将删除数据库记录和本地文件，且不可恢复。`)) {
+        if (confirm(i18n('confirmDelete', {count: paperIdsToDelete.length}))) {
             try {
                 const response = await fetch('/api/papers/delete', {
                     method: 'POST',
@@ -861,15 +1041,23 @@ document.addEventListener('DOMContentLoaded', function () {
         });
 
         if (newPapersUrls.length > 0) {
-            if (confirm(`确定要清除 ${newPapersUrls.length} 个新发现的条目吗？`)) {
+            if (confirm(i18n('confirmClear', {count: newPapersUrls.length}))) {
                 newPapersUrls.forEach(url => currentPapers.delete(url));
                 updateCategoryFilter();
                 filterAndRenderPaperList();
             }
         } else {
-            alert('没有可清除的新条目。');
+            alert(i18n('alertNoNewItems'));
         }
     });
+
+    // Set initial language
+    const savedLang = localStorage.getItem('preferredLanguage');
+    if (savedLang) {
+        setLanguage(savedLang);
+    } else {
+        setLanguage('zh'); // Default to Chinese
+    }
 });
     </script>
 </body>
