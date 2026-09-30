@@ -20,17 +20,14 @@ def get_db_connection():
 
 def init_db():
     """初始化数据库和表"""
-    if os.path.exists(DB_PATH):
-        logger.info("数据库已存在，跳过初始化。")
-        return
-
     logger.info("初始化数据库...")
+    conn = None
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
         cursor.execute(
             """
-        CREATE TABLE papers (
+        CREATE TABLE IF NOT EXISTS papers (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             title TEXT NOT NULL,
             authors TEXT,
@@ -44,14 +41,18 @@ def init_db():
         """
         )
         conn.commit()
-        conn.close()
         logger.info("数据库表 'papers' 创建成功。")
     except sqlite3.Error as e:
         logger.error(f"数据库初始化失败: {e}")
+        raise
+    finally:
+        if conn is not None:
+            conn.close()
 
 
 def add_paper(paper_data):
     """添加一条论文记录"""
+    conn = None
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
@@ -71,7 +72,6 @@ def add_paper(paper_data):
             ),
         )
         conn.commit()
-        conn.close()
         return cursor.lastrowid
     except sqlite3.IntegrityError:
         logger.debug(
@@ -81,38 +81,48 @@ def add_paper(paper_data):
     except sqlite3.Error as e:
         logger.error(f"添加论文到数据库失败: {e}")
         return None
+    finally:
+        if conn is not None:
+            conn.close()
 
 
 def get_all_papers():
     """获取所有论文记录"""
+    conn = None
     try:
         conn = get_db_connection()
         papers = conn.execute(
             "SELECT * FROM papers ORDER BY download_date DESC"
         ).fetchall()
-        conn.close()
         return [dict(p) for p in papers]
     except sqlite3.Error as e:
         logger.error(f"从数据库获取论文列表失败: {e}")
         return []
+    finally:
+        if conn is not None:
+            conn.close()
 
 
 def is_paper_downloaded(pdf_url):
     """通过 PDF 链接检查论文是否已下载"""
+    conn = None
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
         cursor.execute("SELECT id FROM papers WHERE pdf_url = ?", (pdf_url,))
         paper = cursor.fetchone()
-        conn.close()
         return paper is not None
     except sqlite3.Error as e:
         logger.error(f"查询数据库失败: {e}")
         return False
+    finally:
+        if conn is not None:
+            conn.close()
 
 
 def delete_paper_by_id(paper_id):
     """通过ID删除单篇论文记录"""
+    conn = None
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
@@ -123,20 +133,23 @@ def delete_paper_by_id(paper_id):
 
         cursor.execute("DELETE FROM papers WHERE id = ?", (paper_id,))
         conn.commit()
-        conn.close()
         logger.info(f"成功从数据库删除论文 ID: {paper_id}")
         return filepath  # Return filepath for file system deletion
     except sqlite3.Error as e:
         logger.error(f"从数据库删除论文 ID: {paper_id} 失败: {e}")
         return None
+    finally:
+        if conn is not None:
+            conn.close()
 
 
-def delete_papers_by_ids(paper_ids):
+def delete_papers_by_ids(paper_ids, *, validate_filepath=None):
     """通过ID列表批量删除论文记录"""
     if not paper_ids:
         return []
 
     filepaths = []
+    conn = None
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
@@ -148,12 +161,17 @@ def delete_papers_by_ids(paper_ids):
         )
         results = cursor.fetchall()
         filepaths = [row["filepath"] for row in results if row["filepath"]]
+        if validate_filepath is not None:
+            for filepath in filepaths:
+                validate_filepath(filepath)
 
         cursor.execute(f"DELETE FROM papers WHERE id IN ({placeholders})", paper_ids)
         conn.commit()
-        conn.close()
         logger.info(f"成功从数据库批量删除论文 ID: {paper_ids}")
         return filepaths  # Return filepaths for file system deletion
     except sqlite3.Error as e:
         logger.error(f"从数据库批量删除论文 ID: {paper_ids} 失败: {e}")
-        return []
+        raise
+    finally:
+        if conn is not None:
+            conn.close()

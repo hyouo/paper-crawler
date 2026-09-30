@@ -1,6 +1,7 @@
 import yaml
 import os
 import logging
+import tempfile
 
 logger = logging.getLogger(__name__)
 
@@ -53,31 +54,48 @@ def load_config(config_path: str = None) -> dict:
 
     try:
         with open(config_path, "r", encoding="utf-8") as f:
-            return yaml.safe_load(f)
+            return validate_config(yaml.safe_load(f))
     except yaml.YAMLError as e:
         logger.error(f"解析配置文件 {config_path} 出错: {e}")
         raise
 
 
+def validate_config(config_data):
+    """Reject malformed nested objects before they can replace a working config."""
+    if not isinstance(config_data, dict):
+        raise ValueError("Configuration must be an object.")
+    for key in ("fetch_settings", "categories", "output_settings"):
+        if key in config_data and not isinstance(config_data[key], dict):
+            raise ValueError(f"{key} must be an object.")
+    lists = {"keywords": config_data.get("keywords", [])}
+    lists.update(config_data.get("categories", {}))
+    for key, value in lists.items():
+        if not isinstance(value, list) or any(not isinstance(x, str) for x in value):
+            raise ValueError(f"{key} must be a list of strings.")
+    return config_data
+
+
 def save_config(config_data: dict, config_path: str = None) -> bool:
-    """
-    保存配置数据到 YAML 文件。
-    如果 config_path 未提供，则默认保存到项目根目录下的 'config.yaml'。
-    """
+    """Atomically save valid YAML; a failed write leaves the previous file intact."""
     if config_path is None:
         config_path = os.path.join(get_project_root(), "config.yaml")
-
+    temporary = None
     try:
-        with open(config_path, "w", encoding="utf-8") as f:
-            yaml.dump(
-                config_data,
-                f,
-                allow_unicode=True,
-                default_flow_style=False,
-                sort_keys=False,
-            )
+        validate_config(config_data)
+        text = yaml.safe_dump(config_data, allow_unicode=True, sort_keys=False)
+        with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", delete=False,
+                                         dir=os.path.dirname(os.path.abspath(config_path)),
+                                         prefix=".config-", suffix=".tmp") as stream:
+            temporary = stream.name
+            stream.write(text)
+            stream.flush()
+            os.fsync(stream.fileno())
+        os.replace(temporary, config_path)
         logger.info(f"配置已成功保存到 {config_path}")
         return True
-    except Exception as e:
-        logger.error(f"保存配置到 {config_path} 失败: {e}")
+    except (OSError, ValueError, yaml.YAMLError, TypeError) as exc:
+        logger.error(f"保存配置到 {config_path} 失败: {exc}")
         return False
+    finally:
+        if temporary and os.path.exists(temporary):
+            os.unlink(temporary)
