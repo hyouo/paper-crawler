@@ -104,3 +104,19 @@ python -m src.main --mode keyword
 
 ## 📄 许可证
 本项目采用 MIT 许可证。详情请见 `LICENSE` 文件。
+
+## 本地数据保护与回归检查
+
+文件预览、打开和删除接口仅接受 `paper/` 内的 PDF，并检查路径穿越和指向目录外的符号链接。
+新下载记录使用项目相对路径；当前 `paper/` 内的历史绝对路径仍可读取。
+下载先写临时文件，验证 PDF 文件头和已声明的传输长度后才发布，不覆盖已有文件。
+配置保存失败会保留原文件；`PAPER_CRAWLER_SECRET_KEY` 可在环境中设置，不设置时生成临时随机会话密钥。
+应用仍按本地单用户工具使用，这些修复不提供互联网部署所需的完整身份认证。
+
+```bash
+python -m pip install -r requirements.txt 'pytest>=8,<10'
+python -m pytest -q tests/test_core.py
+EVENTLET_NO_GREENDNS=yes python tests/http_smoke.py
+```
+
+测试使用临时数据库、合成 PDF 和模拟下载，不抓取论文或改动已有下载数据。

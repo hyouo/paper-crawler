@@ -6,6 +6,7 @@ eventlet.monkey_patch()
 
 import os
 import logging
+import secrets
 import platform
 import subprocess
 from flask import Flask, render_template, jsonify, request, send_from_directory
@@ -18,6 +19,7 @@ from src import utils
 from src import database
 from src import fetchers
 from src.crawler import Crawler
+from src.paths import resolve_paper_path
 
 # --- 初始化 --- #
 
@@ -33,7 +35,7 @@ config = cfg.load_config()
 
 # 初始化 Flask 应用和 SocketIO
 app = Flask(__name__)
-app.config["SECRET_KEY"] = "your-very-secret-key-change-it!"  # 请在生产环境中更改此密钥
+app.config["SECRET_KEY"] = os.environ.get("PAPER_CRAWLER_SECRET_KEY") or secrets.token_hex(32)
 app.config["TEMPLATES_AUTO_RELOAD"] = True
 app.config["SEND_FILE_MAX_AGE_DEFAULT"] = 0
 socketio = SocketIO(app, async_mode="eventlet")
@@ -59,7 +61,18 @@ def get_config():
 @app.route("/api/config", methods=["POST"])
 def set_config():
     """更新配置"""
-    new_config = request.json
+    changes = request.get_json(silent=True)
+    try:
+        cfg.validate_config(changes)
+        new_config = cfg.load_config()
+        for key, value in changes.items():
+            if key in ("fetch_settings", "categories", "output_settings"):
+                new_config.setdefault(key, {}).update(value)
+            else:
+                new_config[key] = value
+        cfg.validate_config(new_config)
+    except ValueError as exc:
+        return jsonify({"status": "error", "message": str(exc)}), 400
     # Ensure 'categories' and its sub-keys exist in new_config
     if "categories" not in new_config:
         new_config["categories"] = {}
@@ -91,21 +104,23 @@ def get_papers():
 @app.route("/api/papers/delete", methods=["POST"])
 def delete_papers():
     """删除指定的论文记录及其对应的PDF文件"""
-    paper_ids = request.json.get("paper_ids", [])
-    if not paper_ids:
+    payload = request.get_json(silent=True)
+    paper_ids = payload.get("paper_ids") if isinstance(payload, dict) else None
+    if (not isinstance(paper_ids, list) or not paper_ids or len(paper_ids) > 500
+            or any(type(value) is not int or value <= 0 for value in paper_ids)):
         return jsonify({"status": "error", "message": "未提供论文ID。"}), 400
 
     try:
         # Delete from database and get filepaths
-        deleted_filepaths = database.delete_papers_by_ids(paper_ids)
+        deleted_filepaths = database.delete_papers_by_ids(
+            paper_ids, validate_filepath=lambda value: resolve_paper_path(value, must_exist=False)
+        )
 
         # Delete actual PDF files
         deleted_count = 0
         for filepath in deleted_filepaths:
             if filepath:  # Ensure filepath is not None or empty
-                full_path = os.path.join(
-                    os.path.dirname(os.path.abspath(__file__)), filepath
-                )
+                full_path = resolve_paper_path(filepath, must_exist=False)
                 if os.path.exists(full_path):
                     os.remove(full_path)
                     deleted_count += 1
@@ -158,15 +173,16 @@ def _open_path(path):
 @app.route("/api/open_file", methods=["POST"])
 def open_file():
     """接收文件路径并尝试打开它"""
-    filepath = request.json.get("filepath")
+    payload = request.get_json(silent=True)
+    filepath = payload.get("filepath") if isinstance(payload, dict) else None
     if not filepath or not isinstance(filepath, str):
         return jsonify({"status": "error", "message": "未提供有效的文件路径。"}), 400
 
-    # 安全起见，将路径转换为绝对路径
-    base_dir = os.path.dirname(os.path.abspath(__file__))
-    abs_path = os.path.join(base_dir, filepath)
-
-    if not os.path.exists(abs_path) or not os.path.isfile(abs_path):
+    try:
+        abs_path = str(resolve_paper_path(filepath))
+    except ValueError as exc:
+        return jsonify({"status": "error", "message": str(exc)}), 400
+    except FileNotFoundError:
         return jsonify({"status": "error", "message": "文件不存在。"}), 404
 
     if _open_path(abs_path):
@@ -178,13 +194,17 @@ def open_file():
 @app.route("/api/open_folder", methods=["POST"])
 def open_folder():
     """接收文件路径并尝试打开其所在的文件夹"""
-    filepath = request.json.get("filepath")
+    payload = request.get_json(silent=True)
+    filepath = payload.get("filepath") if isinstance(payload, dict) else None
     if not filepath or not isinstance(filepath, str):
         return jsonify({"status": "error", "message": "未提供有效的文件路径。"}), 400
 
-    base_dir = os.path.dirname(os.path.abspath(__file__))
-    abs_path = os.path.join(base_dir, filepath)
-    folder_path = os.path.dirname(abs_path)
+    try:
+        folder_path = str(resolve_paper_path(filepath).parent)
+    except ValueError as exc:
+        return jsonify({"status": "error", "message": str(exc)}), 400
+    except FileNotFoundError:
+        return jsonify({"status": "error", "message": "文件不存在。"}), 404
 
     if not os.path.exists(folder_path):
         return jsonify({"status": "error", "message": "文件夹不存在。"}), 404
@@ -198,13 +218,12 @@ def open_folder():
 @app.route("/paper_files/<path:filepath>")
 def serve_paper_file(filepath):
     """提供对下载的PDF文件的访问"""
-    # filepath 是从项目根目录开始的相对路径, e.g., "paper/arXiv/2023-10-27/some-paper.pdf"
-    base_dir = os.path.dirname(os.path.abspath(__file__))
-    # send_from_directory 需要一个绝对目录和一个文件名
-    # 我们需要从 filepath 中分离出目录和文件名
-    directory = os.path.join(base_dir, os.path.dirname(filepath))
-    filename = os.path.basename(filepath)
-    return send_from_directory(directory, filename)
+    try:
+        path = resolve_paper_path(filepath)
+    except (ValueError, FileNotFoundError):
+        return jsonify({"status": "error", "message": "文件不存在或路径无效。"}), 404
+    return send_from_directory(str(path.parent), path.name)
+
 
 
 # --- Socket.IO 事件处理 --- #
@@ -228,6 +247,12 @@ def handle_disconnect():
 @socketio.on("start_crawl")
 def handle_start_crawl(data):
     """处理开始抓取事件"""
+    if not isinstance(data, dict):
+        return {"status": "error", "message": "请求必须为对象。"}
+    try:
+        cfg.validate_config(data)
+    except ValueError as exc:
+        return {"status": "error", "message": str(exc)}
     mode = data.get("mode", "category")
     # 更新配置以匹配当前的抓取参数
     current_config = cfg.load_config()
@@ -239,7 +264,8 @@ def handle_start_crawl(data):
     new_fetch_settings = data.get("fetch_settings", {})
     current_config["fetch_settings"].update(new_fetch_settings)
 
-    cfg.save_config(current_config)
+    if not cfg.save_config(current_config):
+        return {"status": "error", "message": "保存配置失败。"}
     crawler.config = current_config # Ensure crawler has the latest config
 
     logger.info(
@@ -258,7 +284,7 @@ def handle_stop_crawl():
 @socketio.on("download_papers")
 def handle_download_papers(data):
     """处理下载一篇或多篇论文的事件"""
-    papers = data.get("papers")
+    papers = data.get("papers") if isinstance(data, dict) else None
     if not papers or not isinstance(papers, list):
         logger.warning(f"收到无效的下载请求: {data}")
         return

@@ -1,11 +1,12 @@
 # src/crawler.py
 
 import os
+import hashlib
 import logging
 from datetime import datetime
 from threading import Thread
 
-from . import fetchers, utils, database
+from . import fetchers, utils, database, paths
 
 logger = logging.getLogger(__name__)
 
@@ -48,6 +49,8 @@ class Crawler:
         self._emit("status_update", {"status": f"抓取任务启动，模式: '{mode}'"})
 
         try:
+            if categories is None:
+                categories = self.config.get("categories", {})
             # 1. 确定要调用的爬取函数和对应的类别列表
             arxiv_cats = categories.get("arxiv", [])
             biorxiv_cats = categories.get("biorxiv", [])
@@ -125,15 +128,20 @@ class Crawler:
         下载单个 PDF 文件并报告进度。
         这是一个私有方法，只负责下载，不与数据库交互。
         """
-        base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        base_dir = str(paths.PROJECT_ROOT)
+        if paper_data.get("source") not in ("arXiv", "bioRxiv"):
+            raise ValueError("Unsupported paper source.")
         today_str = datetime.now().strftime("%Y-%m-%d")
         download_dir = os.path.join(base_dir, "paper", paper_data["source"], today_str)
-        os.makedirs(download_dir, exist_ok=True)
+        url_hash = hashlib.sha256(paper_data["pdf_url"].encode("utf-8")).hexdigest()[:12]
+        title = utils.sanitize_filename(paper_data["title"]) or "paper"
+        filename = f"{title}-{url_hash}.pdf"
+        filepath = str(paths.resolve_paper_path(os.path.join(download_dir, filename), must_exist=False))
 
-        filename = f"{utils.sanitize_filename(paper_data['title'])}.pdf"
-        filepath = os.path.join(download_dir, filename)
+        os.makedirs(os.path.dirname(filepath), exist_ok=True)
 
-        def progress_callback(progress, downloaded_mb, total_mb):
+        def progress_callback(progress, downloaded_bytes, total_bytes):
+            downloaded_mb, total_mb = downloaded_bytes / 1024**2, total_bytes / 1024**2
             self._emit(
                 "download_progress",
                 {
@@ -149,13 +157,19 @@ class Crawler:
             paper_data.get("paper_url"),
             progress_callback,
         ):
-            return filepath
+            return os.path.relpath(filepath, base_dir)
         return None
 
     def download_single_paper(self, paper_data):
         """
         公开方法：下载、更新数据库并通知前端。
         """
+        if not isinstance(paper_data, dict) or any(
+            not isinstance(paper_data.get(key), str) or not paper_data[key].strip()
+            for key in ("title", "source", "paper_url", "pdf_url")
+        ):
+            self._emit("status_update", {"status": "无效的论文下载请求。"})
+            return
         try:
             logger.info(f"开始下载论文: {paper_data['title']}")
 
