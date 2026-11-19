@@ -102,5 +102,9 @@ python -m src.main --mode keyword
     └── fetchers.py     # 各来源 (arXiv, bioRxiv) 的数据获取实现
 ```
 
+## 📬 联系方式
+
+<hy200304@gmail.com>
+
 ## 📄 许可证
 本项目采用 MIT 许可证。详情请见 `LICENSE` 文件。

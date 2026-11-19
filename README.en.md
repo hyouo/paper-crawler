@@ -112,5 +112,9 @@ A dictionary defining the specific categories to fetch in **Category Mode**.
     └── fetchers.py     # Data fetching implementations (arXiv, bioRxiv)
 ```
 
+## 📬 Contact
+
+<hy200304@gmail.com>
+
 ## 📄 License
 This project is licensed under the MIT License. See the `LICENSE` file for details.
